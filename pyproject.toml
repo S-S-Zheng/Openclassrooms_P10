@@ -1,0 +1,43 @@
+[project]
+name = "livrable-p10"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "S-S-Zheng",email = "zheng.shipo@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "numpy (>=2.4.3,<3.0.0)",
+    "pandas (==2.2.3)",
+    "streamlit (==1.44.1)",
+    "mistralai (==0.4.2)",
+    "langchain (==0.3.23)",
+    "faiss-cpu (==1.10.0)",
+    "pypdf2 (==3.0.1)",
+    "python-docx (==1.1.2)",
+    "openpyxl (==3.1.5)",
+    "python-dotenv (==1.1.0)",
+    "requests (==2.32.3)",
+    "streamlit-feedback (==0.1.4)",
+    "pymupdf (>=1.22.0)",
+    "pillow (>=9.0.0)",
+    "easyocr (>=1.7.2,<2.0.0)",
+    "tqdm (>=4.67.3,<5.0.0)"
+]
+
+[tool.poetry]
+packages = [{include = "livrable_p10", from = "src"}]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "notebook (>=7.5.5,<8.0.0)",
+    "ipykernel (>=7.2.0,<8.0.0)",
+    "matplotlib (>=3.10.8,<4.0.0)",
+    "scikit-learn (>=1.8.0,<2.0.0)",
+    "ipywidgets (>=8.1.8,<9.0.0)"
+]
