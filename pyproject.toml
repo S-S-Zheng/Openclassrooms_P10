@@ -11,7 +11,6 @@ dependencies = [
     "numpy (>=2.4.3,<3.0.0)",
     "pandas (==2.2.3)",
     "streamlit (==1.44.1)",
-    "mistralai (==0.4.2)",
     "langchain (==0.3.23)",
     "faiss-cpu (==1.10.0)",
     "pypdf2 (==3.0.1)",
@@ -23,7 +22,12 @@ dependencies = [
     "pymupdf (>=1.22.0)",
     "pillow (>=9.0.0)",
     "easyocr (>=1.7.2,<2.0.0)",
-    "tqdm (>=4.67.3,<5.0.0)"
+    "tqdm (>=4.67.3,<5.0.0)",
+    "logfire (>=4.30.0,<5.0.0)",
+    "pydantic-ai-slim (>=0.0.14)",
+    "huggingface-hub (>=0.24.0)",
+    "langchain-huggingface (>=0.1.0)",
+    "openai (>=1.0.0)",
 ]
 
 [tool.poetry]
@@ -39,5 +43,6 @@ dev = [
     "ipykernel (>=7.2.0,<8.0.0)",
     "matplotlib (>=3.10.8,<4.0.0)",
     "scikit-learn (>=1.8.0,<2.0.0)",
-    "ipywidgets (>=8.1.8,<9.0.0)"
+    "ipywidgets (>=8.1.8,<9.0.0)",
+    "ragas (>=0.4.3,<0.5.0)"
 ]
