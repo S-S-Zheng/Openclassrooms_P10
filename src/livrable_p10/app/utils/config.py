@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # --- ROOT -----
-ROOT_DIR = Path(__file__).parents[6]
+ROOT_DIR = Path(__file__).parents[4]
 
 # --- URL ---
 HF_BASE_URL = "https://router.huggingface.co/v1"

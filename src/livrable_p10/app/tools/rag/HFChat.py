@@ -8,11 +8,11 @@ from typing import Dict, List
 
 # --- Importations depuis vos modules ---
 try:
-    from livrable_p10.app.tools.rag.utils.config import (
+    from livrable_p10.app.utils.config import (
         HF_API_KEY, HF_MODEL_NAME, SEARCH_K,
         APP_TITLE, NAME
     )
-    from livrable_p10.app.tools.rag.utils.vector_store import VectorStoreManager
+    from livrable_p10.app.tools.rag.vector_store import VectorStoreManager
 except ImportError as e:
     st.error(f"Erreur d'importation: {e}. Vérifiez votre fichier config.py.")
     st.stop()

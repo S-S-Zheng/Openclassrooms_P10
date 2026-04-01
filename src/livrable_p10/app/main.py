@@ -79,7 +79,7 @@
 #     results = ctx.deps.vector_store.search(user_query, k=3)
 #     if not results:
 #         return "Aucune archive trouvée pour cette requête."
-#     return "\n\n".join([r['text'] for r in results])
+#     return "\n\n".join([result['text'] for result in results])
 
 
 # # --- Point d'entrée ---
@@ -182,7 +182,7 @@
 #     results = ctx.deps.vector_store.search(user_query, k=3)
 #     if not results:
 #         return "Aucune archive trouvée pour cette requête."
-#     return "\n\n".join([r['text'] for r in results])
+#     return "\n\n".join([result['text'] for result in results])
 
 
 # # --- Point d'entrée ---
@@ -214,10 +214,11 @@ from pydantic_ai.providers.openai import OpenAIProvider
 
 # On importe tes versions "nettoyées"
 from livrable_p10.app.tools.sql.sql_tool import nlp_to_sql_pipeline
-from livrable_p10.app.tools.rag.utils.vector_store import VectorStoreManager
-from livrable_p10.app.tools.rag.utils.config import (
+from livrable_p10.app.tools.rag.vector_store import VectorStoreManager
+from livrable_p10.app.utils.config import (
     HF_API_KEY, HF_MODEL_NAME,HF_BASE_URL
 )
+from livrable_p10.app.utils.prompts import AGENT_SYSTEM_PROMPT
 
 # Configuration Logfire
 logfire.configure()
@@ -256,13 +257,7 @@ hf_model = OpenAIChatModel(
 nba_agent = Agent(
     hf_model,
     deps_type=AgentDeps,
-    system_prompt=(
-        "Tu es l'assistant 'NBA Analyst AI'. "
-        "Ton rôle est d'aider les utilisateurs à comprendre les performances et l'ambiance de la NBA.\n"
-        "1. Pour les données chiffrées (points, stats, classements), utilise 'get_player_stats'.\n"
-        "2. Pour le contexte, les ressentis ou l'ambiance, utilise 'get_text_archive'.\n"
-        "Sois précis, professionnel, et cite tes sources si possible."
-    )
+    system_prompt=AGENT_SYSTEM_PROMPT
 )
 
 # --- Outils (Tools) ---
@@ -278,13 +273,14 @@ def get_text_archive(ctx: RunContext[AgentDeps], user_query: str) -> str:
     """Recherche sémantique RAG (articles, ambiance, avis des fans)."""
     logging.info(f"Agent appelle RAG pour : {user_query}")
     results = ctx.deps.vector_store.search(user_query, k=3)
-    
+
     if not results:
         return "Aucune archive textuelle trouvée pour cette question."
-    
+
     formatted_results = [
-        f"Score:[{r['score']}%] - Contenu: {r['text']} (Source: {r['metadata'].get('source', 'Inconnue')})"
-        for r in results
+        f"Score:[{result['score']}%] - Contenu: {result['text']} "
+        f"(Source: {result['metadata'].get('source', 'Inconnue')})"
+        for result in results
     ]
     return "\n\n".join(formatted_results)
 
@@ -292,29 +288,25 @@ def get_text_archive(ctx: RunContext[AgentDeps], user_query: str) -> str:
 
 async def run_nba_assistant(query: str):
     """Initialise les composants et lance l'agent."""
-    # Le VectorStoreManager charge l'index existant (302 vecteurs)
+    # Le VectorStoreManager charge l'index existant
     vsm = VectorStoreManager()
     deps = AgentDeps(vector_store=vsm)
-    
+
     try:
         # L'exécution de l'agent
         result = await nba_agent.run(query, deps=deps)
-        
         # 1. Tentative Pydantic AI standard (version récente)
         if hasattr(result, 'data'):
             return result.data
-            
         # 2. Tentative via l'attribut 'new_data' (certaines versions beta)
         if hasattr(result, 'new_data'):
             return result.new_data
-            
         # 3. Récupération du dernier message de l'assistant (méthode universelle)
         if hasattr(result, 'all_messages'):
             last_msg = result.all_messages()[-1]
             # Si c'est un ModelResponse
             if hasattr(last_msg, 'parts'):
                 return last_msg.parts[0].content
-        
         # 4. Ultime secours : on renvoie l'objet tel quel
         return str(result)
 

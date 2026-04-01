@@ -53,9 +53,9 @@ from ragas.embeddings.base import embedding_factory
 # from mistralai.client.models import ChatCompletionResponse
 from mistralai.models import ChatCompletionResponse
 
-from livrable_p10.app.tools.rag.utils.vector_store import VectorStoreManager
+from livrable_p10.app.tools.rag.vector_store import VectorStoreManager
 from livrable_p10.app.tools.rag.MistralChat import generer_reponse
-from livrable_p10.app.tools.rag.utils.config import (
+from livrable_p10.app.utils.config import (
     MODEL_NAME,
     EMBEDDING_MODEL,
     MISTRAL_API_KEY,

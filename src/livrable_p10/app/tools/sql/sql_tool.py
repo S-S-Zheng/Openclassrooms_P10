@@ -200,8 +200,8 @@ from typing import List, Dict, Any, Optional
 from sqlalchemy import create_engine, text, Engine
 from huggingface_hub import InferenceClient  # On passe au client officiel stable
 
-from livrable_p10.app.tools.sql.prompts import SQL_SYSTEM_PROMPT, SQL_FEW_SHOT
-from livrable_p10.app.tools.rag.utils.config import (
+from livrable_p10.app.utils.prompts import SQL_SYSTEM_PROMPT, SQL_FEW_SHOT
+from livrable_p10.app.utils.config import (
     DATABASE_URL,
     HF_API_KEY, HF_MODEL_NAME
 )
