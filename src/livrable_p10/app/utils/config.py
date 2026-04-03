@@ -55,13 +55,19 @@ INPUT_DIR = str(ROOT_DIR / "datas" / "inputs")
 VECTOR_DB_DIR = str(ROOT_DIR / "datas" / "vector_db")
 FAISS_INDEX_FILE = str(ROOT_DIR / "datas" / "vector_db" / "faiss_index.idx")
 DOCUMENT_CHUNKS_FILE = str(ROOT_DIR / "datas" / "vector_db" / "document_chunks.pkl")
+BLACKLIST_FILE = str(ROOT_DIR / "src" / "livrable_p10" / "app" / "utils" / "blacklist.txt")
 
 CHUNK_SIZE = 1500                   # Taille des chunks en *caractères* (vise ~512 tokens)
-CHUNK_OVERLAP = 150                 # Chevauchement en *caractères*
+CHUNK_OVERLAP = 200                 # Chevauchement en *caractères*
 EMBEDDING_BATCH_SIZE = 32           # Taille des lots pour l'API d'embedding
 
 # --- Configuration de la Recherche ---
 SEARCH_K = 5                        # Nombre de documents à récupérer par défaut
+
+# --- Configuration de la réponse ---
+MAX_TOKENS = 2048
+TEMPERATURE = 0.1
+TOP_P = 0.9
 
 # --- Configuration de la Base de Données ---
 EXCEL_INPUT=INPUT_DIR+"/regular NBA.xlsx"

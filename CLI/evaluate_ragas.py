@@ -51,21 +51,32 @@ from ragas.llms import llm_factory
 from ragas.embeddings.base import embedding_factory
 
 # from mistralai.client.models import ChatCompletionResponse
-from mistralai.models import ChatCompletionResponse
+# from mistralai.models import ChatCompletionResponse
+from langchain_huggingface import HuggingFaceEmbeddings
+from ragas.embeddings import HuggingFaceEmbeddings
+from huggingface_hub import AsyncInferenceClient # Version async pour l'éval
 
 from livrable_p10.app.tools.rag.vector_store import VectorStoreManager
-from livrable_p10.app.tools.rag.MistralChat import generer_reponse
+# from livrable_p10.app.tools.rag.MistralChat import generer_reponse
 from livrable_p10.app.utils.config import (
-    MODEL_NAME,
-    EMBEDDING_MODEL,
-    MISTRAL_API_KEY,
+    # MODEL_NAME,
+    # EMBEDDING_MODEL,
+    # MISTRAL_API_KEY,
+    HF_MODEL_NAME,
+    HF_EMBEDDING_MODEL,
+    HF_API_KEY,
     QA_FILE,
-    RAGAS_OUTPUT
+    RAGAS_OUTPUT,
+    SEARCH_K
 )
 
 # Configuration Logfire
 logfire.configure()
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)-8s | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 logger = logging.getLogger(__name__)
 
 
@@ -76,24 +87,45 @@ class RAGPrototypeWrapper:
 
     def __init__(self):
         self.vsm = VectorStoreManager()
+        self.k = SEARCH_K
+        # On utilise AsyncInferenceClient pour ne pas bloquer l'évaluateur
+        self.client = AsyncInferenceClient(model=HF_MODEL_NAME, token=HF_API_KEY)
+
+    async def _generer_reponse_hf(self, prompt: str, context: str) -> str:
+        """Logique de génération identique à HFChat mais en async"""
+        messages = [
+            {
+                "role": "system", 
+                "content": f"Tu es un expert NBA. Réponds en utilisant le contexte fourni.\n\nCONTEXTE:\n{context}"
+            },
+            {"role": "user", "content": prompt}
+        ]
+        try:
+            # Appel asynchrone à l'API Hugging Face
+            response = await self.client.chat_completion(
+                messages=messages,
+                max_tokens=500,
+                temperature=0.2
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            logger.error(f"Erreur HF API : {e}")
+            return ""
 
     @logfire.instrument("RAG_Query")
     async def query(self, question: str):
-        # Recherche (Retrieval)
-        results = self.vsm.search(question, k=5)
+        # 1. Retrieval (Recherche dans ton VectorStoreManager local)
+        results = self.vsm.search(question, k=self.k)
         contexts = [res['text'] for res in results]
+        context_str = "\n\n".join(contexts)
 
-        # Formatage contexte
-        context_str = "\n\n---\n\n".join(contexts)
-
-        # Génération (Generation)
-        # On simule le format attendu par generer_reponse dans MistralChat.py
-        prompt = f"Contexte:\n{context_str}\n\nQuestion: {question}"
-        # Format dictionnaire pour le SDK moderne
-        messages = [{"role": "user", "content": prompt}]
-
-        answer = generer_reponse(messages)
-        return {"answer": answer, "contexts": contexts}
+        # 2. Generation (Appel à l'API HF)
+        answer = await self._generer_reponse_hf(question, context_str)
+        
+        return {
+            "answer": answer,
+            "contexts": contexts
+        }
 
 
 # =========================== Chargement des QA =====================================
@@ -167,7 +199,9 @@ async def run_rag_on_qa(
         try:
             result = await rag.query(question=question)
             answer: str = result["answer"]
-            contexts: list[str] = [doc.page_content for doc in result["source_documents"]]
+            # contexts: list[str] = [doc.page_content for doc in result["source_documents"]]
+            # On récupère les textes déjà extraits dans le wrapper
+            contexts: list[str] = result["contexts"]
         except Exception as exc:
             logger.warning(f"Requete RAG echouée concernant '{question}':\n{exc}")
             answer = ""

@@ -100,13 +100,13 @@ import pickle
 
 
 from livrable_p10.app.utils.config import (
-    INPUT_DIR,VECTOR_DB_DIR) # INPUT_DATA_URL (décommentez si besoin)
+    INPUT_DIR, VECTOR_DB_DIR, BLACKLIST_FILE)
 from livrable_p10.app.utils.data_loader import (
     download_and_extract_zip,
     load_and_parse_files
 )
 from livrable_p10.app.tools.rag.vector_store import VectorStoreManager
-
+from livrable_p10.app.utils.document_reshape import get_clean_and_entitle
 
 # Configuration du logger centralisée
 logging.basicConfig(
@@ -145,9 +145,22 @@ def run_indexing(input_directory: str, data_url: Optional[str] = None) -> None:
         logging.info(f"Aucune URL fournie. Utilisation des fichiers locaux dans: {input_directory}")
 
     # --- Étape 2: Chargement et Parsing des Fichiers ---
-    logging.info(f"Chargement et parsing des fichiers depuis: {input_directory}")
+    # logging.info(f"Chargement et parsing des fichiers depuis: {input_directory}")
     # On précise que documents est une liste (le type exact dépend du loader, souvent List[Dict])
-    documents: List[Any] = load_and_parse_files(input_directory)
+    # documents: List[Any] = load_and_parse_files(input_directory)
+    # On charge le fichier OCR temporaire s'il existe
+    tmp_file = os.path.join(VECTOR_DB_DIR, 'tmp_ocr.pkl')
+    if os.path.exists(tmp_file):
+        logging.info(f"--- Chargement de l'OCR depuis le cache : {tmp_file} ---")
+        with open(tmp_file, 'rb') as f:
+            documents: List[Any] = pickle.load(f)
+    else:
+        logging.info(f"Chargement et parsing des fichiers depuis: {input_directory}")
+        documents: List[Any] = load_and_parse_files(input_directory)
+        # Sauvegarde immédiate après l'OCR
+        with open(tmp_file, 'wb') as f:
+            pickle.dump(documents, f)
+        logging.info(f"--- {tmp_file} sauvegardé ---")
 
     if not documents:
         logging.warning(
@@ -155,14 +168,19 @@ def run_indexing(input_directory: str, data_url: Optional[str] = None) -> None:
         )
         logging.info("--- Processus d'indexation terminé (aucun document traité) ---")
         return
-    # Persistence temporaire:
-    tmp_file = os.path.join(VECTOR_DB_DIR, 'tmp_ocr.pkl')
-    if not os.path.exists(tmp_file):
-        with open(tmp_file, 'wb') as f:
-            pickle.dump(documents, f)
-        logging.info(f"--- {tmp_file} sauvegardé ---")
-    else:
-        logging.info(f"--- {tmp_file} existe déjà, passage à l'étape suivante ---")
+
+    # # Persistence temporaire:
+    # tmp_file = os.path.join(VECTOR_DB_DIR, 'tmp_ocr.pkl')
+    # if not os.path.exists(tmp_file):
+    #     with open(tmp_file, 'wb') as f:
+    #         pickle.dump(documents, f)
+    #     logging.info(f"--- {tmp_file} sauvegardé ---")
+    # else:
+    #     logging.info(f"--- {tmp_file} existe déjà, passage à l'étape suivante ---")
+
+    # Nettoyage du bruit
+    logging.info("Nettoyage du bruit post OCR...")
+    cleaned_documents = get_clean_and_entitle(documents, BLACKLIST_FILE)
 
     # --- Étape 3: Création/Mise à jour de l'index Vectoriel ---
     logging.info("Initialisation du gestionnaire de Vector Store...")
@@ -170,11 +188,11 @@ def run_indexing(input_directory: str, data_url: Optional[str] = None) -> None:
 
     logging.info("Construction de l'index Faiss (cela peut prendre du temps)...")
     # Cette méthode va splitter, générer les embeddings, créer l'index et sauvegarder
-    vector_store.build_index(documents)
+    vector_store.build_index(cleaned_documents)
 
     # --- Finalité du processus ----
     logging.info("--- Processus d'indexation terminé avec succès ---")
-    logging.info(f"Nombre de documents traités: {len(documents)}")
+    logging.info(f"Nombre de documents traités: {len(cleaned_documents)}")
     if vector_store.index:
         logging.info(f"Nombre de chunks indexés: {vector_store.index.ntotal}")
     else:

@@ -272,7 +272,7 @@ def load_and_parse_files(input_dir: str) -> List[Dict[str, Any]]:
     Returns:
         Une liste de dictionnaires au format {'page_content': str, 'metadata': dict}
     """
-    documents = []
+    documents: List[Dict[str, Any]] = []
     input_path = Path(input_dir)
     if not input_path.is_dir():
         logging.error(f"Le répertoire d'entrée '{input_dir}' n'existe pas.")

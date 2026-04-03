@@ -535,7 +535,6 @@ from livrable_p10.app.utils.config import (
     HF_API_KEY, HF_EMBEDDING_MODEL
 )
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -605,7 +604,9 @@ class VectorStoreManager:
             for i, chunk in enumerate(chunks):
                 all_chunks.append({
                     "id": f"{doc_idx}_{i}",
-                    "text": chunk.page_content,
+                    "text": (
+                        f"Sujet: {chunk.metadata.get("title")}\n\n" + chunk.page_content
+                    ),
                     "metadata": {
                         **chunk.metadata,
                         "chunk_id_in_doc": i,
