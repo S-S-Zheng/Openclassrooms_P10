@@ -10,6 +10,7 @@ load_dotenv()
 ROOT_DIR = Path(__file__).parents[4]
 
 # --- URL ---
+BASE_URL = "https://api.mistral.ai/v1"
 HF_BASE_URL = "https://router.huggingface.co/v1"
 
 # --- Clé API ---
@@ -57,15 +58,15 @@ FAISS_INDEX_FILE = str(ROOT_DIR / "datas" / "vector_db" / "faiss_index.idx")
 DOCUMENT_CHUNKS_FILE = str(ROOT_DIR / "datas" / "vector_db" / "document_chunks.pkl")
 BLACKLIST_FILE = str(ROOT_DIR / "src" / "livrable_p10" / "app" / "utils" / "blacklist.txt")
 
-CHUNK_SIZE = 1500                   # Taille des chunks en *caractères* (vise ~512 tokens)
-CHUNK_OVERLAP = 200                 # Chevauchement en *caractères*
+CHUNK_SIZE = 1000                  # Taille des chunks en *caractères* (vise ~512 tokens)
+CHUNK_OVERLAP = 150                 # Chevauchement en *caractères*
 EMBEDDING_BATCH_SIZE = 32           # Taille des lots pour l'API d'embedding
 
 # --- Configuration de la Recherche ---
-SEARCH_K = 5                        # Nombre de documents à récupérer par défaut
+SEARCH_K = 3                        # Nombre de documents à récupérer par défaut
 
 # --- Configuration de la réponse ---
-MAX_TOKENS = 2048
+MAX_TOKENS = 500
 TEMPERATURE = 0.1
 TOP_P = 0.9
 
@@ -80,5 +81,5 @@ APP_TITLE = "NBA Analyst AI"
 NAME = "NBA" # Nom à personnaliser dans l'interface
 
 # --- Chemins de test et évaluation ---
-QA_FILE = str(ROOT_DIR / "datas" / "qa_pairs" / "qa_pairs.json")
+QA_PATH = str(ROOT_DIR / "datas" / "qa_pairs")
 RAGAS_OUTPUT = str(ROOT_DIR / "datas" / "qa_pairs" / "ragas.json")

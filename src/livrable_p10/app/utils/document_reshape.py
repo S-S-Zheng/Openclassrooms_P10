@@ -58,10 +58,10 @@ def get_clean_and_entitle(
         # On créée une liste des lignes qui composent le document via le séparateur \n
         lines = doc['page_content'].split('\n')
         # Le titre est dans le header de la page en deuxième ligne (normalement)
-        # title = lines[1].strip()
+        title = lines[1].strip()
         # OU ALORS LA 11è ligne (si la seconde est vraiment cropée par ...)
-        autor_badge = " ".join(lines[10:13]).lower()
-        title = lines[11].strip() if "comm. du top 1%" in autor_badge else lines[12].strip()
+        # autor_badge = " ".join(lines[8:15]).lower()
+        # title = lines[10].strip() if "top 1%" in autor_badge else lines[11].strip()
         # La copie nettoyée
         cleaned_lines = []
 

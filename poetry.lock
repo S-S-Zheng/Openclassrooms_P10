@@ -1131,6 +1131,21 @@ files = [
 ]
 
 [[package]]
+name = "eval-type-backport"
+version = "0.3.1"
+description = "Like `typing._eval_type`, but lets older Python versions use newer typing features."
+optional = false
+python-versions = ">=3.7"
+groups = ["main"]
+files = [
+    {file = "eval_type_backport-0.3.1-py3-none-any.whl", hash = "sha256:279ab641905e9f11129f56a8a78f493518515b83402b860f6f06dd7c011fdfa8"},
+    {file = "eval_type_backport-0.3.1.tar.gz", hash = "sha256:57e993f7b5b69d271e37482e62f74e76a0276c82490cf8e4f0dffeb6b332d5ed"},
+]
+
+[package.extras]
+tests = ["pytest"]
+
+[[package]]
 name = "executing"
 version = "2.2.1"
 description = "Get the currently executing AST node of a frame, and other information"
@@ -1737,7 +1752,7 @@ version = "0.4.3"
 description = "Consume Server-Sent Event (SSE) messages with HTTPX."
 optional = false
 python-versions = ">=3.9"
-groups = ["dev"]
+groups = ["main", "dev"]
 files = [
     {file = "httpx_sse-0.4.3-py3-none-any.whl", hash = "sha256:0ac1c9fe3c0afad2e0ebb25a934a59f4c7823b60792691f779fad2c5568830fc"},
     {file = "httpx_sse-0.4.3.tar.gz", hash = "sha256:9b1ed0127459a66014aec3c56bebd93da3c1bc8bb6618c8082039a44889a755d"},
@@ -1900,6 +1915,18 @@ trafilatura = ["trafilatura (>=1.12.2,<3.0.0)"]
 vertexai = ["google-cloud-aiplatform (>=1.53.0,<2.0.0)", "jsonref (>=1.1.0,<2.0.0)"]
 writer = ["writer-sdk (>=2.2.0,<3.0.0)"]
 xai = ["python-dotenv (>=1.0.0)", "xai-sdk (>=0.2.0) ; python_version >= \"3.10\""]
+
+[[package]]
+name = "invoke"
+version = "2.2.1"
+description = "Pythonic task execution"
+optional = false
+python-versions = ">=3.6"
+groups = ["main"]
+files = [
+    {file = "invoke-2.2.1-py3-none-any.whl", hash = "sha256:2413bc441b376e5cd3f55bb5d364f973ad8bdd7bf87e53c79de3c11bf3feecc8"},
+    {file = "invoke-2.2.1.tar.gz", hash = "sha256:515bf49b4a48932b79b024590348da22f39c4942dff991ad1fb8b8baea1be707"},
+]
 
 [[package]]
 name = "ipykernel"
@@ -2730,6 +2757,25 @@ tokenizers = ">=0.19.1"
 full = ["sentence-transformers (>=2.6.0)", "transformers (>=4.39.0)"]
 
 [[package]]
+name = "langchain-mistralai"
+version = "0.2.12"
+description = "An integration package connecting Mistral and LangChain"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "langchain_mistralai-0.2.12-py3-none-any.whl", hash = "sha256:64a85947776017eec787b586f4bfa092d237c5e95a9ed719b5ff22a81747dedf"},
+    {file = "langchain_mistralai-0.2.12.tar.gz", hash = "sha256:c2ecd1460c48adbe497a2d3794052dfcc974a1280ceab4476047e62343d8bbc9"},
+]
+
+[package.dependencies]
+httpx = ">=0.25.2,<1"
+httpx-sse = ">=0.3.1,<1"
+langchain-core = ">=0.3.68"
+pydantic = ">=2,<3"
+tokenizers = ">=0.15.1,<1"
+
+[[package]]
 name = "langchain-openai"
 version = "0.3.35"
 description = "An integration package connecting OpenAI and LangChain"
@@ -3298,6 +3344,35 @@ files = [
     {file = "mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8"},
     {file = "mdurl-0.1.2.tar.gz", hash = "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba"},
 ]
+
+[[package]]
+name = "mistralai"
+version = "1.12.4"
+description = "Python Client SDK for the Mistral AI API."
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "mistralai-1.12.4-py3-none-any.whl", hash = "sha256:7b69fcbc306436491ad3377fbdead527c9f3a0ce145ec029bf04c6308ff2cca6"},
+    {file = "mistralai-1.12.4.tar.gz", hash = "sha256:e52b53bab58025dcd208eeac13e3c3df5778d4112eeca1f08124096c7738929f"},
+]
+
+[package.dependencies]
+eval-type-backport = ">=0.2.0"
+httpx = ">=0.28.1"
+invoke = ">=2.2.0,<3.0.0"
+opentelemetry-api = ">=1.33.1,<2.0.0"
+opentelemetry-exporter-otlp-proto-http = ">=1.37.0,<2.0.0"
+opentelemetry-sdk = ">=1.33.1,<2.0.0"
+pydantic = ">=2.10.3"
+python-dateutil = ">=2.8.2"
+pyyaml = ">=6.0.2,<7.0.0"
+typing-inspection = ">=0.4.0"
+
+[package.extras]
+agents = ["authlib (>=1.5.2,<2.0)", "griffe (>=1.7.3,<2.0)", "mcp (>=1.0,<2.0)"]
+gcp = ["google-auth (>=2.27.0)", "requests (>=2.32.3)"]
+realtime = ["websockets (>=13.0)"]
 
 [[package]]
 name = "mistune"
@@ -8067,4 +8142,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.13"
-content-hash = "bb282f526062e23500fb04b2bbea4411cae82656ba410609d6f10a9ea963b2e3"
+content-hash = "853b690ac91d40b47d825d40ba01f6f72d7c6fe07b22f37483a456b5c1973ea9"

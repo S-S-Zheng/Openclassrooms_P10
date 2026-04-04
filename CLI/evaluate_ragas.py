@@ -25,6 +25,17 @@ réduire le coût:
     Les moins coûteuses: ``ContextRecall``. C'est une comparaison directe entre la ground_truth
     et les contextes. C'est plus rapide car la cible est fixe.
 """
+import os
+import warnings
+
+# Bloque les warnings de dépréciation (LambdaRuntimeClient)
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", message="Accessing LambdaRuntimeClient")
+# Réduit le niveau de log de Transformers
+os.environ["TRANSFORMERS_VERBOSITY"] = "error"
+# ATTENTION on cache juste car spamming de warning dû a transformers + answer_relevancy mais
+# mais il y a dépréciation donc potentiel crash futur...
+
 
 # Imports
 import argparse
@@ -37,7 +48,7 @@ import json
 import numpy as np
 from openai import AsyncOpenAI # On utilise le client OpenAI pour la compatibilité avec ragas
 import logfire
-
+from typing import Optional
 
 from ragas.cache import DiskCacheBackend
 from ragas import EvaluationDataset, SingleTurnSample
@@ -52,20 +63,22 @@ from ragas.embeddings.base import embedding_factory
 
 # from mistralai.client.models import ChatCompletionResponse
 # from mistralai.models import ChatCompletionResponse
-from langchain_huggingface import HuggingFaceEmbeddings
-from ragas.embeddings import HuggingFaceEmbeddings
-from huggingface_hub import AsyncInferenceClient # Version async pour l'éval
+# from langchain_huggingface import HuggingFaceEmbeddings
+# from ragas.embeddings import HuggingFaceEmbeddings
+# from huggingface_hub import AsyncInferenceClient
 
-from livrable_p10.app.tools.rag.vector_store import VectorStoreManager
+# from livrable_p10.app.tools.rag.vector_store import VectorStoreManager
 # from livrable_p10.app.tools.rag.MistralChat import generer_reponse
+from livrable_p10.app.tools.rag.LLMChat import LLMChat
 from livrable_p10.app.utils.config import (
-    # MODEL_NAME,
-    # EMBEDDING_MODEL,
-    # MISTRAL_API_KEY,
-    HF_MODEL_NAME,
-    HF_EMBEDDING_MODEL,
-    HF_API_KEY,
-    QA_FILE,
+    MODEL_NAME,
+    EMBEDDING_MODEL,
+    MISTRAL_API_KEY,
+    BASE_URL,
+    # HF_MODEL_NAME,
+    # HF_EMBEDDING_MODEL,
+    # HF_API_KEY,
+    QA_PATH,
     RAGAS_OUTPUT,
     SEARCH_K
 )
@@ -83,49 +96,15 @@ logger = logging.getLogger(__name__)
 # =========================== CLASS WRAPPER RAG ====================================
 
 class RAGPrototypeWrapper:
-    """Wrappe le prototype fourni RAG pour évaluation RAGAS"""
-
     def __init__(self):
-        self.vsm = VectorStoreManager()
-        self.k = SEARCH_K
-        # On utilise AsyncInferenceClient pour ne pas bloquer l'évaluateur
-        self.client = AsyncInferenceClient(model=HF_MODEL_NAME, token=HF_API_KEY)
+        self.chat = LLMChat()
+        self.chat.client.max_tokens = 4096
 
-    async def _generer_reponse_hf(self, prompt: str, context: str) -> str:
-        """Logique de génération identique à HFChat mais en async"""
-        messages = [
-            {
-                "role": "system", 
-                "content": f"Tu es un expert NBA. Réponds en utilisant le contexte fourni.\n\nCONTEXTE:\n{context}"
-            },
-            {"role": "user", "content": prompt}
-        ]
-        try:
-            # Appel asynchrone à l'API Hugging Face
-            response = await self.client.chat_completion(
-                messages=messages,
-                max_tokens=500,
-                temperature=0.2
-            )
-            return response.choices[0].message.content
-        except Exception as e:
-            logger.error(f"Erreur HF API : {e}")
-            return ""
-
-    @logfire.instrument("RAG_Query")
     async def query(self, question: str):
-        # 1. Retrieval (Recherche dans ton VectorStoreManager local)
-        results = self.vsm.search(question, k=self.k)
-        contexts = [res['text'] for res in results]
-        context_str = "\n\n".join(contexts)
-
-        # 2. Generation (Appel à l'API HF)
-        answer = await self._generer_reponse_hf(question, context_str)
-        
-        return {
-            "answer": answer,
-            "contexts": contexts
-        }
+        # Utilisation directe des méthodes de ta classe
+        contexts = await self.chat.get_context(question)
+        answer = await self.chat.generate_response(question, contexts)
+        return {"answer": answer, "contexts": contexts}
 
 
 # =========================== Chargement des QA =====================================
@@ -279,9 +258,14 @@ async def ragas_eval(dataset: EvaluationDataset) -> dict:
     # On utilise le client OpenAI pointant vers l'URL de Mistral
     # Détournement OBLIGATOIRE (si on veut rester sur Mistral a minima)
     client = AsyncOpenAI(
-        base_url="https://api.mistral.ai/v1",
-        api_key=MISTRAL_API_KEY
+        base_url=BASE_URL,
+        api_key=MISTRAL_API_KEY,
+        max_retries = 1
     )
+    # client = AsyncInferenceClient(
+    #     model=HF_MODEL_NAME,
+    #     token=HF_API_KEY
+    # )
 
     # Utilisation des factories pour obtenir des objets InstructorLLM modernes
     judge_llm = llm_factory(
@@ -297,10 +281,11 @@ async def ragas_eval(dataset: EvaluationDataset) -> dict:
 
     # Initialisation manuelle des Scorers
     metrics = {
-        "answer_relevancy": AnswerRelevancy(llm=judge_llm, embeddings=judge_embeddings), # type:ignore
+        "answer_relevancy": AnswerRelevancy(
+            llm=judge_llm, embeddings=judge_embeddings), # type:ignore
         "faithfulness": Faithfulness(llm=judge_llm),
         "context_recall": ContextRecall(llm=judge_llm),
-        "context_precision": ContextPrecision(llm=judge_llm)
+        # "context_precision": ContextPrecision(llm=judge_llm)
     }
     results = {name: [] for name in metrics}
     # mapping des arguments des métriques car ragas prise de tete...
@@ -308,7 +293,7 @@ async def ragas_eval(dataset: EvaluationDataset) -> dict:
         "faithfulness": ["user_input", "response", "retrieved_contexts"],
         "answer_relevancy": ["user_input", "response"],
         "context_recall": ["user_input", "reference", "retrieved_contexts"],
-        "context_precision": ["user_input", "reference", "retrieved_contexts"],
+        # "context_precision": ["user_input", "reference", "retrieved_contexts"],
     }
 
     for i, qa in enumerate(dataset):
@@ -363,8 +348,8 @@ def print_scores(scores: dict[str, float]) -> None:
 def save_results(
     scores: dict,
     full_result: list[dict],
-    result_path: Path,
-    result_filename: str = "eval_results"
+    result_path: Optional[Path]=None,
+    result_filename: str = "eval_results.json"
 ) -> None:
     """
     Sauvegarde les résultats d'évaluation et détails au format JSON.
@@ -418,7 +403,7 @@ async def main(qa_file: Path) -> None:
     # Charger l'index pré-construit
     rag = RAGPrototypeWrapper()
     # ====================== Chargement des paires QA ===================
-    qa_pairs = load_qa_pairs(Path(str(QA_FILE)))
+    qa_pairs = load_qa_pairs(qa_file)
     # ===================== Inférence rag ===========================
     full_result = await run_rag_on_qa(rag, qa_pairs)
     # ==================== Preparation des réultats pour éval ==================
@@ -426,7 +411,7 @@ async def main(qa_file: Path) -> None:
     scores = await ragas_eval(dataset)
     # ================== Print score et rapport ======================
     print_scores(scores)
-    save_results(scores, full_result, Path(str(RAGAS_OUTPUT)))
+    save_results(scores, full_result, result_filename=RAGAS_OUTPUT)
     duration = time.monotonic() - start
     logger.info(f"Évaluation terminée en {duration:.2f} s ===")
 
@@ -440,7 +425,7 @@ if __name__ == "__main__": # pragma: no cover
     parser.add_argument(
         "--qa-file",
         type=Path,
-        default=Path("datas/qa_pairs/qa_pairs.json"),
+        default=Path(QA_PATH),
         help="Chemin du fichier QA annoté (defaut: datas/qa_pairs/qa_pairs.json).",
     )
     args = parser.parse_args()
