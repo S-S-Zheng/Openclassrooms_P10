@@ -120,6 +120,7 @@ class Team(Base):
     mean_pie = Column(Float)
     mean_pace= Column(Float)
     mean_poss = Column(Float)
+    mean_ts = Column(Float)
 
 # ================= MONITORING =================
 
@@ -134,7 +135,6 @@ class Report(Base):
         status_code (int): Le code de statut HTTP retourné (ex: 200, 422, 500).
         response_time_ms (float): Temps de traitement de la requête en millisecondes.
         user_query (str): La question utilisateur.
-        llm_response (str): Réponse du LLM.
     """
 
     __tablename__ = "reports"
@@ -144,7 +144,6 @@ class Report(Base):
 
     user_query = Column(Text)
     sql_generated = Column(Text)
-    llm_response = Column(Text)
 
     status_code = Column(Integer)
     response_time_ms = Column(Float)

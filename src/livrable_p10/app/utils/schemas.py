@@ -54,8 +54,10 @@ Module de définition des schémas Pydantic pour la base de donnée.
 from pydantic import BaseModel, Field, field_validator
 
 
+# ======================== STATS (et PLAYER) ========================
+
 class NBAInputSchema(BaseModel):
-    """Schéma de validation pour une ligne de la Feuille 1."""
+    """Schéma de validation pour une ligne de la feuille NBA Données."""
     player_name: str = Field(
         ...,
         alias="Player",
@@ -355,3 +357,20 @@ class NBAInputSchema(BaseModel):
         if not value <= 100:
             return value/10
         return value
+
+
+# ======================== TEAM ========================
+
+
+class TeamInputSchema(BaseModel):
+    """Schéma de validation pour la feuille Equipe."""
+    team_abbr: str = Field(
+        ..., 
+        alias="Code", 
+        description="Équipe du joueur (code à 3 lettres)"
+    )
+    full_name: str = Field(
+        ..., 
+        alias="Nom complet de l'équipe",
+        description="Nom complet de l'équipe"
+    )
