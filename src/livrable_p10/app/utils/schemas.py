@@ -14,7 +14,7 @@ Module de définition des schémas Pydantic pour la base de donnée.
 |FGM|Tirs réussis par match (Field Goals Made)|
 |FGA|Tirs tentés par match (Field Goals Attempted)|
 |FG%|Pourcentage de réussite aux tirs|
-|15:00|Minutes jouées après 15:00 de jeu|
+|15:00:00|Minutes jouées après 15:00 de jeu|
 |3PA|Tirs à 3 points tentés par match|
 |3P%|Pourcentage de réussite à 3 points|
 |FTM|Lancers francs réussis (Free Throws Made)|
@@ -133,7 +133,7 @@ class NBAInputSchema(BaseModel):
     )
     fifteen:int=Field(
         ...,
-        alias="15:00",
+        alias="15:00:00",
         ge=0,
         le=999,
         description="Minutes jouées après 15:00 de jeu"
@@ -288,8 +288,8 @@ class NBAInputSchema(BaseModel):
     )
     dreb_pct: float = Field(
         alias="DREB%",
-        ge=-25.0,
-        le=25.0,
+        ge=-50.0,
+        le=50.0,
         description="Pourcentage de rebonds défensif parmi ceux disponibles"
     )
     reb_pct: float = Field(
@@ -307,7 +307,7 @@ class NBAInputSchema(BaseModel):
     efg_pct: float = Field(
         alias="EFG%",
         ge=0.0,
-        le=100.0,
+        le=125.0,
         description="Effective Field Goal % (pondère les 3 points)"
     )
     ts_pct: float = Field(
@@ -319,7 +319,7 @@ class NBAInputSchema(BaseModel):
     usg_pct: float = Field(
         alias="USG%",
         ge=0.0,
-        le=125.0,
+        le=100.0,
         description="Usage Rate – pourcentage des actions utilisées par le joueur"
     )
     pace: float = Field(
@@ -344,7 +344,7 @@ class NBAInputSchema(BaseModel):
     )
 
 
-    @field_validator("EFG%","TS%" )
+    @field_validator("efg_pct","ts_pct" )
     @classmethod
     def check_percentages(cls, value: float) -> float:
         """
@@ -352,7 +352,7 @@ class NBAInputSchema(BaseModel):
         Remarque
         ----
         - Il faudra enlever les limiteurs type ge/le sinon Pydantic levera l'erreur avant fix
-        - Ne concerne que EFG% et TS% pour le moment.
+        - Ne concerne que efg_pct (EFG%) et ts_pct (TS%) pour le moment.
         """
         if not value <= 100:
             return value/10

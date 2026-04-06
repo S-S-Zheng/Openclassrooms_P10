@@ -71,8 +71,9 @@ TEMPERATURE = 0.1
 TOP_P = 0.9
 
 # --- Configuration de la Base de Données ---
+SQLITE_FLAG=os.getenv("SQLITE_FLAG","True")
 EXCEL_INPUT=INPUT_DIR+"/regular NBA.xlsx"
-DATABASE_DIR = ROOT_DIR / "NBA_database"
+DATABASE_DIR = ROOT_DIR / "datas" / "NBA_database"
 DATABASE_FILE = DATABASE_DIR / "interactions.db"
 DATABASE_URL = f"sqlite:///{DATABASE_FILE}" # URL pour SQLAlchemy
 

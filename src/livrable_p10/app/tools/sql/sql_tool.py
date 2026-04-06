@@ -196,66 +196,116 @@
 # src/livrable_p10/app/tools/sql/sql_tool.py
 
 import logging
+import time
+from datetime import datetime
 from typing import List, Dict, Any, Optional
 from sqlalchemy import create_engine, text, Engine
+
 from huggingface_hub import InferenceClient  # On passe au client officiel stable
+from langchain_mistralai import ChatMistralAI
+
 
 from livrable_p10.app.utils.prompts import SQL_SYSTEM_PROMPT, SQL_FEW_SHOT
 from livrable_p10.app.utils.config import (
-    DATABASE_URL,
-    HF_API_KEY, HF_MODEL_NAME
+    HF_API_KEY, HF_MODEL_NAME, SEARCH_K,
+    TOP_P, TEMPERATURE, MAX_TOKENS,
+    MISTRAL_API_KEY, BASE_URL, MODEL_NAME,
+    DATABASE_URL
 )
+
 
 # Configuration du logger
 logger = logging.getLogger(__name__)
 
+
+# ============================================================================
+
+
 class SQLQueryEngine:
     """
-    Moteur de conversion Langage Naturel vers SQL via Hugging Face Inference API.
+    Moteur de conversion Langage Naturel vers SQL via LLM.
     """
 
-    def __init__(self, database_url: str, api_key: str) -> None:
+    def __init__(self, database_url: str) -> None:
         """Initialise SQLAlchemy et le client Inference HF."""
         self.engine: Engine = create_engine(database_url)
         # L'InferenceClient gère lui-même les routes du routeur HF
-        self.client = InferenceClient(model=HF_MODEL_NAME, token=api_key)
+        # self.client = InferenceClient(model=HF_MODEL_NAME, token=api_key)
+        self.client = ChatMistralAI(
+            model_name=MODEL_NAME,
+            api_key=MISTRAL_API_KEY, #type:ignore
+            temperature=0, # Le LLM doit exclusivement être factuel
+            max_tokens=150, # Pas besoin d'autant qu'en sémantique
+            max_retries = 1
+        )
+        self.prompt_sql = SQL_SYSTEM_PROMPT
+        self.few_shots = SQL_FEW_SHOT
 
     def _clean_sql_response(self, content: str) -> str:
         """Nettoie le texte généré pour n'extraire que la requête SQL pure."""
         # Supprime le balisage Markdown si présent
         sql_query = content.replace("```sql", "").replace("```", "").strip()
+
+        # Garde fou sur les instructions pour rester en lecture seule
+        forbidden_keywords = ["DROP", "DELETE", "UPDATE", "INSERT", "ALTER"]
+        if any(keyword in sql_query.upper() for keyword in forbidden_keywords):
+            logger.warning(f"Requête non autorisée : {sql_query}")
+            raise PermissionError("Accès refusé : opération d'écriture interdite.")
+
         # On ne garde que la première instruction SQL pour plus de sécurité
-        if ";" in sql_query:
-            sql_query = sql_query.split(';')[0] + ';'
-        return sql_query
+        # if ";" in sql_query:
+        #     sql_query = sql_query.split(';')[0] + ';'
+        return (
+            sql.split(';')[0] + ';' 
+            if ';' in sql 
+            else sql
+        )
+
+    # async def _log_report(service, query, sql, status, start_tick):
+    # """S'occupe du rapprot."""
+    # duration_ms = int((time.monotonic() - start_tick) * 1000)
+    # try:
+    #     with service.engine.begin() as conn:
+    #         conn.execute(
+    #             text("""
+    #                 INSERT INTO reports (created_at, user_query, sql_generated, status_code,
+    #                 response_time_ms)
+    #                 VALUES (:now, :query, :sql, :status, :time)
+    #             """),
+    #             {
+    #                 "now": datetime.now().isoformat(),
+    #                 "query": query,
+    #                 "sql": sql,
+    #                 "status": status,
+    #                 "time": duration_ms
+    #             }
+    #         )
+    # except Exception as e:
+    #     logger.warning(f"Logging report échoué : {e}")
 
     async def generate_sql(self, user_query: str) -> Optional[str]:
         """Génère une requête SQL à partir de la question utilisateur."""
         # Construction du prompt structuré
-        full_prompt = f"{SQL_SYSTEM_PROMPT}\n\n{SQL_FEW_SHOT}\n\nQuestion: {user_query}\nSQL:"
-        
+        full_prompt = (
+            f"{self.prompt_sql}\n\n{self.few_shots}\n\nQuestion: {user_query}\nSQL:"
+        )
         try:
-            # Appel via InferenceClient (compatible avec ton environnement sans GPU)
-            # On utilise chat_completion pour bénéficier du formatage de chat
-            response = self.client.chat_completion(
-                messages=[{"role": "user", "content": full_prompt}],
-                max_tokens=150,
-                temperature=0.01, # Indispensable pour la fidélité SQL
-            )
-            
-            content = response.choices[0].message.content
+            # Correction syntaxe LangChain : .ainvoke() et .content
+            response = await self.client.ainvoke(full_prompt)
+            content = response.content
             if content:
-                sql_query = self._clean_sql_response(content)
-                logger.info(f"SQL Généré : {sql_query}")
-                return sql_query
-            
-            return None
+                # On force en string car LangChain peut renvoyer des listes de dict parfois
+                return self._clean_sql_response(str(content))
+            return "Désolé, je n'ai pas pu générer de réponse valide."
         except Exception as e:
-            logger.error(f"Erreur génération SQL via HF : {e}")
-            return None
+            logger.error(f"Erreur API : {e}")
+            return (
+                "Je suis désolé, une erreur technique m'empêche de répondre."
+                "Veuillez réessayer plus tard."
+            )
 
     def execute_query(self, sql_query: str) -> List[Dict[str, Any]]:
-        """Exécute la requête sur la base de données SQL locale."""
+        """Exécute la requête sur la base de données."""
         try:
             with self.engine.connect() as conn:
                 result = conn.execute(text(sql_query))
@@ -267,21 +317,44 @@ class SQLQueryEngine:
 
 # ===================================================================
 
-async def nlp_to_sql_pipeline(query: str) -> str:
-    """Pipeline Tool pour l'Agent NBA."""
-    # Instanciation dynamique du service
-    service = SQLQueryEngine(DATABASE_URL, HF_API_KEY)
-    
-    sql = await service.generate_sql(query)
-    if not sql:
-        return "Je n'ai pas pu traduire votre question en requête SQL."
-    
-    data = service.execute_query(sql)
-    
-    if not data:
-        return f"Aucun résultat en base de données pour cette requête : {sql}"
-        
-    if isinstance(data[0], dict) and "error" in data[0]:
-        return f"Erreur lors de l'accès aux données : {data[0]['error']}"
+# async def nlp_to_sql_pipeline(query: str) -> str:
+#     """Pipeline Tool pour l'Agent NBA avec logging automatique."""
+#     logging.info("Lancement du tool SQL...")
+#     start_time = time.monotonic()
+#     # Instanciation dynamique du service
+#     service = SQLQueryEngine(DATABASE_URL)
 
-    return f"Résultats trouvés (Requête : {sql}) :\n{data}"
+#     try:
+#         # génère le sql à partir de la requete nlp
+#         sql = await service.generate_sql(query)
+#         if not sql:
+#             # Cas où le LLM ne renvoie rien ou échoue
+#             await _log_report(service, query, "FAILED", "SQL_GEN_FAILED", start_time)
+#             return "Désolé, je n'ai pas pu traduire votre demande en requête SQL."
+
+#         # lance la requete sql sur la db
+#         data = service.execute_query(sql)
+#         # Vérification d'erreur dans les données retournées
+#         if data and isinstance(data[0], dict) and "error" in data[0]:
+#             await _log_report(service, query, sql, "EXECUTION_ERROR", start_time)
+#             # On pourrait lever une Exception 500 ici si on veut que l'Agent s'arrête
+#             return f"Erreur lors de l'exécution SQL : {data[0]['error']}"
+
+#         await _log_report(service, query, sql, "SUCCESS_200", start_time)
+#         if not data:
+#             return (
+#                 f"La requête a fonctionné ({sql}) mais la base de"
+#                 "données est muette pour cette recherche."
+#             )
+#         return f"Résultats SQL :\n{data}"
+
+#     except PermissionError:
+#         # Si _clean_sql_response a détecté un mot interdit (DROP, etc.)
+#         await _log_report(service, query, "BLOCKED", "FORBIDDEN_403", start_time)
+#         return "Sécurité : Cette requête contient des commandes non autorisées."
+
+#     except Exception as e:
+#         # Erreur système imprévue (Type 500)
+#         await _log_report(service, query, "CRASH", "INTERNAL_ERROR_500", start_time)
+#         logger.error(f"Crash tool SQL : {e}")
+#         return "Une erreur interne est survenue lors de l'accès aux données."

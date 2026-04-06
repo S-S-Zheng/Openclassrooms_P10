@@ -3,16 +3,16 @@ Ce module contient la classe NBAEngine. Elle est autonome et asynchrone (pour Ra
 mais on peut l'utiliser de manière synchrone pour Streamlit.
 """
 
-# LLMChat.py
+# NBAAgent.py
 import streamlit as st
 import asyncio
 from livrable_p10.app.utils.config import APP_TITLE, HF_MODEL_NAME, NAME
-from livrable_p10.app.tools.rag.LLMChat import LLMChat
+from livrable_p10.app.agents.nba_agent import NBAAgent
 
 # --- Initialisation des ressources ---
-@st.cache_resource
+@st.cache_resource # Va garder en mémoire les réssources
 def get_engine():
-    return LLMChat()
+    return NBAAgent()
 
 engine = get_engine()
 
@@ -33,8 +33,8 @@ if "messages" not in st.session_state:
     }]
 
 # Affichage des messages de l'historique (pour l'UI)
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
+for msg in st.session_state.messages: # Maintient la mémoire de la session
+    with st.chat_message(msg["role"]): # Gère l'affichage des bulels de messages
         st.markdown(msg["content"])
 
 # Zone de saisie utilisateur
@@ -47,9 +47,11 @@ if prompt := st.chat_input(f"Posez votre question sur la {NAME}..."):
     # Afficher indicateur + Générer la réponse de l'assistant via LLM
     with st.chat_message("assistant"):
         with st.spinner("Consultation des archives..."):
-            # Exécution de la logique via l'Engine
+            # ------ Retrieve
             # On utilise asyncio.run pour faire le pont entre l'UI synchrone et l'engine async
-            contexts = asyncio.run(engine.get_context(prompt))
+            contexts = asyncio.run(engine.get_context_index(prompt))
+
+            # ------- Générate
             # Génération de la réponse de l'assistant en utilisant le prompt augmenté
             full_response = asyncio.run(engine.generate_response(prompt, contexts))
 

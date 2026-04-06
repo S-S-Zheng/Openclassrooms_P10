@@ -213,8 +213,8 @@ from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
 # On importe tes versions "nettoyées"
-from livrable_p10.app.tools.sql.sql_tool import nlp_to_sql_pipeline
-from livrable_p10.app.tools.rag.vector_store import VectorStoreManager
+from livrable_p10.app.tools.sql.sql_pipeline import nlp_to_sql_pipeline
+from livrable_p10.app.tools.semantic.vector_store import VectorStoreManager
 from livrable_p10.app.utils.config import (
     HF_API_KEY, HF_MODEL_NAME,HF_BASE_URL
 )

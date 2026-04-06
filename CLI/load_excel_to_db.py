@@ -1,5 +1,13 @@
 """
 Chargement des données tabulaires dans la base de donnée.
+
+Workflow
+----
+* SQLAlchemy supprime les tables existantes (si elles existent).
+* SQLAlchemy crée les tables players, stats, teams et reports toutes neuves.
+* Pandas lit l'Excel.
+* Pydantic valide chaque ligne.
+* SQLAlchemy insère les données proprement.
 """
 
 import pandas as pd
@@ -13,6 +21,7 @@ from livrable_p10.app.db.base import Base
 from livrable_p10.app.db.models_db import Team, Player, Stat, Report
 from livrable_p10.app.utils.config import DATABASE_URL, EXCEL_INPUT
 from livrable_p10.app.utils.schemas import NBAInputSchema, TeamInputSchema
+from livrable_p10.app.db.create_db import init_db
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +52,8 @@ def _ingest_players_and_stats(session: Session, df_stats: pd.DataFrame) -> None:
     player_cache = {}
 
     for _, row in df_stats.iterrows():
-        # On transforme la ligne Excel en dictionnaire
-        row_dict = row.to_dict()
+        # Nettoyage des NaN : on transforme les NaN en None
+        row_dict = row.where(pd.notnull(row), None).to_dict()
 
         # On a déjà tout renseigné dans le pydantic, on va donc l'utiliser pour le mapping
         # (Validation + Mapping des alias)
@@ -167,24 +176,50 @@ def load_excel_data(file_path: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     logger.info(f"Chargement des données depuis {file_path}")
 
+    # ------------------------ FILTRE ET NETTOYAGE ------------------------
     # header feuille Données NBA commence à la ligne 2 tandis
-    # que pour Equipe et Dictionnaire des données, c'est la ligne 1.
+    # que pour Equipe et Dictionnaire des données, col'est la ligne 1.
     df_stats = pd.read_excel(file_path, sheet_name="Données NBA", header=1)
     # df_dict = pd.read_excel(file_path, sheet_name="Dictionnaire des données", header=0)
     df_teams = pd.read_excel(file_path, sheet_name="Equipe", header=0)
 
-    # Application .strip() sur les string
-    # Sur les headers
+    # # Force tous les noms de colonnes en string et strip les espaces
+    # df_stats.columns = [str(col).strip() for col in df_stats.columns]
+
+    # # Filtre des colonnes "fantômes"
+    # # On ne garde que les colonnes qui ne commencent pas par "Unnamed"
+    # df_stats = df_stats.loc[:, ~df_stats.columns.str.contains('^Unnamed', na=False)]
+    # df_teams = df_teams.loc[:, ~df_teams.columns.str.contains('^Unnamed', na=False)]
+
+    # # Application .strip() sur les string
+    # # Sur les headers
+    # for df in [df_stats, df_teams]:
+    #     df.columns = df.columns.str.strip()
+    # # Sur les colonnes concernées
+    # df_stats['Player'] = df_stats['Player'].astype(str).str.strip()
+    # df_stats['Team'] = df_stats['Team'].astype(str).str.strip()
+    # df_teams['Code'] = df_teams['Code'].astype(str).str.strip()
+    # df_teams["Nom complet de l'équipe"] = \
+    #     df_teams["Nom complet de l'équipe"].astype(str).str.strip()
+    # # df_dict['Dictionnaire des données'] = \
+    # #     df_dict['Dictionnaire des données'].astype(str).str.strip()
+
+    # Headers
     for df in [df_stats, df_teams]:
-        df.columns = df.columns.str.strip()
-    # Sur les colonnes concernées
+        # headers = str + strip()
+        df.columns = [str(col).strip() for col in df.columns]
+        # Drop les colonnes vides
+        df.drop(
+            columns=[col for col in df.columns if "Unnamed" in col or col == "nan"],
+            inplace=True
+        )
+
+    # nettoyage des espacements
     df_stats['Player'] = df_stats['Player'].astype(str).str.strip()
     df_stats['Team'] = df_stats['Team'].astype(str).str.strip()
     df_teams['Code'] = df_teams['Code'].astype(str).str.strip()
     df_teams["Nom complet de l'équipe"] = \
         df_teams["Nom complet de l'équipe"].astype(str).str.strip()
-    # df_dict['Dictionnaire des données'] = \
-    #     df_dict['Dictionnaire des données'].astype(str).str.strip()
 
     return df_stats, df_teams
 
@@ -222,4 +257,16 @@ def run_etl() -> None:
 
 
 if __name__ == "__main__":
-    run_etl()
+    try:
+        logger.info("ETL des données tabulaires dans la DB")
+        # On drop toutes les tables et on ré-init
+        # ==> on pourrait enlever les lignes de delete dans chaque fonction d'ingestion mais
+        # juste pour être sûr, on les laisse pour le moment.
+        init_db(reset_tables=True)
+
+        # On lance l'ETL
+        run_etl()
+
+        logger.info("DB chargé")
+    except Exception as e:
+        logger.critical(f"Erreur de chargement de la DB : {e}")

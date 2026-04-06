@@ -1,6 +1,6 @@
 
 
-# livrable_p10/app/tools/rag/LLMChat.py
+# livrable_p10/app/tools/rag/NBAAgent.py
 import logging
 from huggingface_hub import AsyncInferenceClient
 from openai import AsyncOpenAI
@@ -11,7 +11,7 @@ from livrable_p10.app.utils.config import (
     TOP_P, TEMPERATURE, MAX_TOKENS,
     MISTRAL_API_KEY, BASE_URL, MODEL_NAME
 )
-from livrable_p10.app.tools.rag.vector_store import VectorStoreManager
+from livrable_p10.app.tools.semantic.vector_store import VectorStoreManager
 from livrable_p10.app.utils.prompts import AGENT_SYSTEM_PROMPT_BEFORE
 
 logger = logging.getLogger(__name__)
@@ -20,9 +20,8 @@ logger = logging.getLogger(__name__)
 # ============================================================
 
 
-class LLMChat:
-    """LLM du RAG ."""
-    
+class NBAAgent:
+    """Agent intelligent orchestrant SQL et Recherche Sémantique."""
     def __init__(self):
         self.vsm = VectorStoreManager()
         # self.client = AsyncInferenceClient(
@@ -39,8 +38,8 @@ class LLMChat:
         )
         self.prompt_text = AGENT_SYSTEM_PROMPT_BEFORE
 
-    async def get_context(self, question: str) -> list:
-        """Récupère les documents pertinents."""
+    async def get_context_index(self, question: str) -> list:
+        """Récupère les documents dans l'index."""
         try:
             results = self.vsm.search(question, k=SEARCH_K)
             return [res['text'] for res in results]
@@ -49,7 +48,9 @@ class LLMChat:
             return []
 
     async def generate_response(self, question: str, contexts: list) -> str:
-        """Génère une réponse basée sur le contexte fourni."""
+        """Orchestre la réponse en consultant SQL et VectorStore en parallèle."""
+        logger.info(f"Traitement de la question : {question}...")
+
         context_text = "\n\n".join([f"{context}" for context in contexts])
         if not context_text:
             logging.warning("Aucun document pertinents trouvé")

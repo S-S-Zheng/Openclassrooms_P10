@@ -47,7 +47,7 @@ class Stat(Base):
 
     # Identifications
     id = Column(Integer, primary_key=True)
-    team_abbr = Column(String(3), index=True) # Clé pour lier aux Teams
+    team_abbr = Column(String(3), ForeignKey("teams.abbreviation"), index=True)
 
     age= Column(Integer)
     gp= Column(Integer)

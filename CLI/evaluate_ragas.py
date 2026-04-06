@@ -69,7 +69,7 @@ from ragas.embeddings.base import embedding_factory
 
 # from livrable_p10.app.tools.rag.vector_store import VectorStoreManager
 # from livrable_p10.app.tools.rag.MistralChat import generer_reponse
-from livrable_p10.app.tools.rag.LLMChat import LLMChat
+from livrable_p10.app.agents.nba_agent import NBAAgent
 from livrable_p10.app.utils.config import (
     MODEL_NAME,
     EMBEDDING_MODEL,
@@ -97,12 +97,12 @@ logger = logging.getLogger(__name__)
 
 class RAGPrototypeWrapper:
     def __init__(self):
-        self.chat = LLMChat()
+        self.chat = NBAAgent()
         self.chat.client.max_tokens = 4096
 
     async def query(self, question: str):
         # Utilisation directe des méthodes de ta classe
-        contexts = await self.chat.get_context(question)
+        contexts = await self.chat.get_context_index(question)
         answer = await self.chat.generate_response(question, contexts)
         return {"answer": answer, "contexts": contexts}
 

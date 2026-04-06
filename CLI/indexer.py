@@ -105,7 +105,7 @@ from livrable_p10.app.utils.data_loader import (
     download_and_extract_zip,
     load_and_parse_files
 )
-from livrable_p10.app.tools.rag.vector_store import VectorStoreManager
+from livrable_p10.app.tools.semantic.vector_store import VectorStoreManager
 from livrable_p10.app.utils.document_reshape import get_clean_and_entitle
 
 # Configuration du logger centralisée
