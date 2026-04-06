@@ -67,9 +67,10 @@ from ragas.embeddings.base import embedding_factory
 # from ragas.embeddings import HuggingFaceEmbeddings
 # from huggingface_hub import AsyncInferenceClient
 
-# from livrable_p10.app.tools.rag.vector_store import VectorStoreManager
+from livrable_p10.app.tools.semantic.vector_store import VectorStoreManager
 # from livrable_p10.app.tools.rag.MistralChat import generer_reponse
-from livrable_p10.app.agents.nba_agent import NBAAgent
+# from livrable_p10.app.agents.nba_agent import NBAAgent
+from livrable_p10.app.agents.nba_agent import NBAEngine
 from livrable_p10.app.utils.config import (
     MODEL_NAME,
     EMBEDDING_MODEL,
@@ -95,18 +96,24 @@ logger = logging.getLogger(__name__)
 
 # =========================== CLASS WRAPPER RAG ====================================
 
-class RAGPrototypeWrapper:
+# class RAGPrototypeWrapper:
+#     def __init__(self):
+#         self.chat = NBAAgent()
+#         self.chat.client.max_tokens = 4096
+
+#     async def query(self, question: str):
+#         # Utilisation directe des méthodes
+#         contexts = await self.chat.get_context_index(question)
+#         answer = await self.chat.generate_response(question, contexts)
+#         return {"answer": answer, "contexts": contexts}
+
+class RAGPrototypeWrapper(NBAEngine):
     def __init__(self):
-        self.chat = NBAAgent()
-        self.chat.client.max_tokens = 4096
+        super().__init__()
 
     async def query(self, question: str):
-        # Utilisation directe des méthodes de ta classe
-        contexts = await self.chat.get_context_index(question)
-        answer = await self.chat.generate_response(question, contexts)
-        return {"answer": answer, "contexts": contexts}
-
-
+        # On utilise la méthode de l'Engine
+        return await self.get_eval_data(question)
 # =========================== Chargement des QA =====================================
 
 

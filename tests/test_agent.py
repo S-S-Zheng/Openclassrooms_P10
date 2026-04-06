@@ -6,7 +6,8 @@ import logfire
 
 import sys
 
-from livrable_p10.app.main import run_nba_assistant
+# from old.main import run_nba_assistant
+from livrable_p10.app.agents.nba_agent import NBAEngine
 
 # On active logfire pour voir les "thoughts" de l'agent en live
 logfire.configure()
@@ -14,20 +15,25 @@ logfire.configure()
 async def debug_agent():
     queries = [
         # Test 1 : Pur SQL (Quantitatif)
-        "Qui est le meilleur marqueur de l'équipe sur toute la saison ?",
-        
+        "Qui est le meilleur scorer sur toute la saison ?",
+
         # Test 2 : Pur RAG (Qualitatif / Reddit)
-        "Que disent les fans de l'ambiance au Madison Square Garden ?",
-        
+        "Que disent les fans à propos de Reggie Miller ?",
+
         # Test 3 : Hybride (Demande une réflexion)
-        "Compare les stats de Curry avec ce que les gens pensent de sa forme actuelle."
+        """
+        Qui est le meilleur joueur selon les internautes? Compare le en terme de points
+        avec le meilleur joueur de la saison.
+        """
     ]
+
+    engine = NBAEngine()
 
     for q in queries:
         print(f"\n🚀 Question: {q}")
         try:
             # La réponse est maintenant un simple string
-            response_text = await run_nba_assistant(q)
+            response_text = await engine.run_nba_assistant(q)
             print(f"🤖 Réponse: {response_text}")
         except Exception as e:
             print(f"❌ Erreur : {e}")
