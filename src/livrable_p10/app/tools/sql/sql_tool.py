@@ -235,14 +235,19 @@ class SQLQueryEngine:
             model_name=MODEL_NAME,
             api_key=MISTRAL_API_KEY, #type:ignore
             temperature=0, # Le LLM doit exclusivement être factuel
-            max_tokens=150, # Pas besoin d'autant qu'en sémantique
-            max_retries = 1
+            max_tokens=250, # Pas besoin d'autant qu'en sémantique
+            max_retries = 3,
+            timeout = 60
         )
         self.prompt_sql = SQL_SYSTEM_PROMPT
         self.few_shots = SQL_FEW_SHOT
 
     def _clean_sql_response(self, content: str) -> str:
         """Nettoie le texte généré pour n'extraire que la requête SQL pure."""
+        # on a dit dans le prompt de générer ça si, hallucination sql avec plus de 3 imbrications)
+        if "DATA_NOT_AVAILABLE" in content:
+            return "DATA_NOT_AVAILABLE"
+
         # Supprime le balisage Markdown si présent
         sql_query = content.replace("```sql", "").replace("```", "").strip()
 

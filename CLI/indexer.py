@@ -100,7 +100,7 @@ import pickle
 
 
 from livrable_p10.app.utils.config import (
-    INPUT_DIR, VECTOR_DB_DIR, BLACKLIST_FILE, LOGS_PATH)
+    INPUT_DIR, VECTOR_DB_DIR, BLACKLIST_FILE)
 from livrable_p10.app.utils.data_loader import (
     download_and_extract_zip,
     load_and_parse_files
@@ -108,14 +108,7 @@ from livrable_p10.app.utils.data_loader import (
 from livrable_p10.app.tools.semantic.vector_store import VectorStoreManager
 from livrable_p10.app.utils.document_reshape import get_clean_and_entitle
 
-# Configuration du logger centralisée
-logging.basicConfig(
-    level=logging.INFO, 
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(LOGS_PATH / "indexer.log"), # Sauvegarde
-    ]
-)
+
 logger = logging.getLogger(__name__)
 
 
@@ -206,6 +199,10 @@ def run_indexing(input_directory: str, data_url: Optional[str] = None) -> None:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO, 
+        format='%(asctime)s - %(levelname)s - %(message)s',
+    )
     parser = argparse.ArgumentParser(description="Script d'indexation pour l'application RAG")
     parser.add_argument(
         "--input-dir",

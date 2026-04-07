@@ -67,7 +67,7 @@ from ragas.embeddings.base import embedding_factory
 # from ragas.embeddings import HuggingFaceEmbeddings
 # from huggingface_hub import AsyncInferenceClient
 
-from livrable_p10.app.tools.semantic.vector_store import VectorStoreManager
+# from livrable_p10.app.tools.semantic.vector_store import VectorStoreManager
 # from livrable_p10.app.tools.rag.MistralChat import generer_reponse
 # from livrable_p10.app.agents.nba_agent import NBAAgent
 from livrable_p10.app.agents.nba_agent import NBAEngine
@@ -83,20 +83,10 @@ from livrable_p10.app.utils.config import (
     RAGAS_OUTPUT,
     SEARCH_K,
     TEMPERATURE,
-    TOP_P,
-    LOGS_PATH
+    TOP_P
 )
 
-# Configuration Logfire
-logfire.configure()
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)-8s | %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-    handlers=[
-        logging.FileHandler(LOGS_PATH / "evaluation.log"), # Sauvegarde
-    ]
-)
+
 logger = logging.getLogger(__name__)
 
 
@@ -206,6 +196,10 @@ async def run_rag_on_qa(
                 "contexts": contexts,
             }
         )
+
+        # On tempère pour éviter le code 429
+        if i < len(qa_pairs):
+            await asyncio.sleep(10)
 
     return full_result
 
@@ -331,7 +325,7 @@ async def ragas_eval(dataset: EvaluationDataset) -> dict:
 
         # Pause pour respecter le Rate Limit de l'API Mistral
         if i < len(dataset) - 1:
-            await asyncio.sleep(2.0)
+            await asyncio.sleep(5.0)
 
     return {
         name: float(np.nanmean(scores))
@@ -397,7 +391,7 @@ def save_results(
     }
     with open(result_filename, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
-    logger.info(f"Resultats sauvegardés dans {result_path}")
+    logger.info(f"Resultats sauvegardés dans {result_path or result_filename}")
 
 
 # =========================================================
@@ -415,6 +409,7 @@ async def main(qa_file: Path) -> None:
         Chemin du fichier QA annoté
     """
     # ========================= Initialisation =========================
+    logfire.info("Début de l'évaluation")
     start = time.monotonic()
     # Charger l'index pré-construit
     rag = RAGPrototypeWrapper()
@@ -437,6 +432,14 @@ async def main(qa_file: Path) -> None:
 # =========================================================
 
 if __name__ == "__main__": # pragma: no cover
+    # Configuration Logfire
+    logfire.configure()
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s | %(levelname)-8s | %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
+    )
+
     parser = argparse.ArgumentParser(description="Evalue le RAG en utilisant des métriques RAGAS")
     parser.add_argument(
         "--qa-file",

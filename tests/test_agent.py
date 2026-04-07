@@ -1,16 +1,22 @@
 
 
 # tests/test_agent.py
+import logging
 import asyncio
 import logfire
 
-import sys
 
 # from old.main import run_nba_assistant
 from livrable_p10.app.agents.nba_agent import NBAEngine
 
-# On active logfire pour voir les "thoughts" de l'agent en live
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)-8s | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
+# On active logfire les étapes de l'agent
 logfire.configure()
+logfire.instrument_pydantic_ai()
 
 async def debug_agent():
     queries = [
@@ -30,13 +36,13 @@ async def debug_agent():
     engine = NBAEngine()
 
     for q in queries:
-        print(f"\n🚀 Question: {q}")
+        print(f"\n Question: {q}")
         try:
             # La réponse est maintenant un simple string
             response_text = await engine.run_nba_assistant(q)
-            print(f"🤖 Réponse: {response_text}")
+            print(f"Réponse: {response_text}")
         except Exception as e:
-            print(f"❌ Erreur : {e}")
+            print(f"Erreur : {e}")
 
 if __name__ == "__main__":
     asyncio.run(debug_agent())

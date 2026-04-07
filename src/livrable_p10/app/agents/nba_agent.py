@@ -107,6 +107,7 @@
 
 
 # livrable_p10/app/agents/nba_agent.py
+import logfire
 import logging
 from pydantic import BaseModel, ConfigDict
 from pydantic_ai import Agent, RunContext
@@ -237,33 +238,29 @@ class NBAEngine:
 
     async def run_nba_assistant(self, question: str) -> str:
         """Exécute l'agent avec les dépendances déjà chargées."""
-        try:
-            # L'exécution de l'agent
-            result = await nba_agent.run(question, deps=self.deps)
-            # 1. Tentative Pydantic AI standard (version récente)
-            if hasattr(result, 'data'):
-                print("data")
-                return result.data
-            # 2. Tentative via l'attribut 'new_data' (certaines versions beta)
-            if hasattr(result, 'new_data'):
-                print("new_data")
-                return result.new_data
-            # 3. Récupération du dernier message de l'assistant (méthode universelle)
-            if hasattr(result, 'all_messages'):
-                print("all_messages")
-                last_msg = result.all_messages()[-1]
-                # Si c'est un ModelResponse
-                if hasattr(last_msg, 'parts'):
-                    print("parts")
-                    return last_msg.parts[0].content
-            # 4. Ultime secours : on renvoie l'objet tel quel
-            print("Ultime secours")
-            return str(result)
+        # Cette ligne lie la question à tous les logs qui suivent (SQL, Index, LLM)
+        with logfire.span("Requête Agent: {question}", prompt=question):
+            try:
+                # L'exécution de l'agent
+                result = await nba_agent.run(question, deps=self.deps)
+                # # 1. Tentative Pydantic AI standard (version récente)
+                # if hasattr(result, 'data'):
+                #     return result.data
+                # # 2. Tentative via l'attribut 'new_data' (certaines versions beta)
+                # if hasattr(result, 'new_data'):
+                #     return result.new_data
+                # # 3. Récupération du dernier message de l'assistant (méthode universelle)
+                if hasattr(result, 'all_messages'):
+                    last_msg = result.all_messages()[-1]
+                    # Si c'est un ModelResponse
+                    if hasattr(last_msg, 'parts'):
+                        return last_msg.parts[0].content
+                # 4. Ultime secours : on renvoie l'objet tel quel
+                return str(result)
 
-        except Exception as e:
-            logging.error(f"Erreur Agent : {e}")
-            # return f"Une erreur est survenue : {str(e)}"
-            raise RuntimeError(f"L'agent n'a pas pu répondre : {e}")
+            except Exception as e:
+                logging.error(f"Erreur Agent : {e}")
+                return f"Une erreur est survenue : {str(e)}"
 
     async def get_eval_data(self, question: str) -> dict:
         """

@@ -57,11 +57,14 @@ async def nlp_to_sql_pipeline(query: str) -> str:
     try:
         # génère le sql à partir de la requete nlp
         sql_generated = await service.generate_sql(query)
-        if not sql_generated:
+        if not sql_generated or "DATA_NOT_AVAILABLE" in sql_generated:
             status = "SQL_GEN_FAILED_500"
             # Report
             _write_report(service, query, sql_generated, status, start_time)
-            return f"Echec  de la requete sql: {status}."
+            return (
+                f"Echec de la requete sql: {status}. L'outil SQL ne peut pas répondre"
+                "à cette question, essayez l'index."
+            )
 
         # lance la requete sql sur la db
         data = service.execute_query(sql_generated)
@@ -70,8 +73,8 @@ async def nlp_to_sql_pipeline(query: str) -> str:
         _write_report(service, query, sql_generated, status, start_time)
         if not data:
             return (
-                f"La requête a fonctionné ({sql_generated}) mais la base de"
-                "données est muette pour cette recherche."
+                f"La requête a fonctionné ({sql_generated}) mais rien n'a été trouvé."
+                "Essayez l'index"
             )
         return f"Résultats SQL :\n{data}"
 
@@ -86,4 +89,7 @@ async def nlp_to_sql_pipeline(query: str) -> str:
         status = "INTERNAL_ERROR_500"
         _write_report(service, query, sql_generated, status, start_time)
         logger.error(f"Crash tool SQL : {e}")
-        return f"Erreur interne: {status}"
+        return (
+            f"Erreur interne SQL ({status}). Les données statistiques ne sont pas accessibles"
+            "pour cette question. Essayez l'index."
+        )

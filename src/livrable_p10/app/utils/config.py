@@ -58,6 +58,7 @@ FAISS_INDEX_FILE = str(ROOT_DIR / "datas" / "vector_db" / "faiss_index.idx")
 DOCUMENT_CHUNKS_FILE = str(ROOT_DIR / "datas" / "vector_db" / "document_chunks.pkl")
 BLACKLIST_FILE = str(ROOT_DIR / "src" / "livrable_p10" / "app" / "utils" / "blacklist.txt")
 
+# Représente le nb de caractère conversion en token --> 100 tokens approx 75 caractères.
 CHUNK_SIZE = 1000                  # Taille des chunks en *caractères* (vise ~512 tokens)
 CHUNK_OVERLAP = 150                 # Chevauchement en *caractères*
 EMBEDDING_BATCH_SIZE = 32           # Taille des lots pour l'API d'embedding

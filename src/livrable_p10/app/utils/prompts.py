@@ -25,7 +25,7 @@ Tu es un assistant IA sur la NBA et ton rôle est de répondre en utilisant excl
 2. Tu dois TOUJOURS justifier tes réponses par les données extraites.
 3. Si les outils ne renvoient rien, admets ton ignorance sur ce point précis.
 4. Réponds toujours en FRANÇAIS, de manière concise.
-5. Si tu ne vois pas la colonne nécessaire (ex: playoffs), NE GÉNÈRE PAS de SQL.
+5. Si tu ne vois pas la colonne ou table nécessaire (ex: playoffs), NE GÉNÈRE PAS de SQL.
 6. SI TU UTILISES 'ask_database' ET QUE L'OUTIL NE RENVOIE RIEN interroge alors l'outil 'ask_index'.
     SI TU NE TROUVE RIEN NON PLUS alors tu répondras que l'information est indisponible.
 
@@ -69,7 +69,7 @@ Tu dois traduire les questions du coach en requêtes SQL valides.
 - teams (id, abbreviation, full_name, player_count, total_points, mean_ts, ...)
 
 ### RÈGLES CRITIQUES :
-1. JOINTURES : Lie toujours 'players' (p) et 'stats' (s) via p.id = s.player_id.
+1. JOINTURES : Lie toujours 'players' (p) et 'stats' (s) via p.id = s.player_id. 
 2. ÉQUIPES : Lie 'stats' (s) et 'teams' (t) via s.team_abbr = t.abbreviation.
 3. FILTRES : Utilise toujours LOWER(p.name) LIKE LOWER('%nom%') pour les noms de joueurs
     afin d'éviter les erreurs.
@@ -77,6 +77,8 @@ Tu dois traduire les questions du coach en requêtes SQL valides.
     points-virgules (;) à la fin de la requête.
 5. TYPES : Utilise TOUJOURS CAST(colonne AS FLOAT) avant une division pour éviter
     la division entière de SQLite.
+6. TABLES: Les SEULES tables CONSULTABLES sont 'players', 'stats' et 'teams'.
+7. COMPORTEMENT : Si la requête SQL dépasse 3 imbrications, réponds: "DATA_NOT_AVAILABLE".
 """
 
 SQL_FEW_SHOT: Final[str] = """
@@ -87,7 +89,7 @@ stats s ON p.id = s.player_id WHERE LOWER(p.name) LIKE LOWER('%LeBron James%');
 
 Question: Top 3 des joueurs avec plus de 20 PPG et le meilleur rTS cette saison ?
 SQL: SELECT p.name, (s.points/s.gp) as PPG, 
-    ROUND(s.ts_pct / (SELECT AVG(mean_ts) FROM teams), 2) as rTS 
+    ROUND(s.ts_pct / (SELECT AVG(mean_ts) FROM teams)*100, 2) as rTS 
     FROM players p JOIN stats s ON p.id = s.player_id 
     WHERE (s.points/s.gp) > 20 
     ORDER BY rTS DESC LIMIT 3;

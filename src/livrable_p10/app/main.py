@@ -10,7 +10,7 @@ import logfire
 import logging
 
 
-from livrable_p10.app.utils.config import APP_TITLE, HF_MODEL_NAME, NAME, LOGS_PATH
+from livrable_p10.app.utils.config import APP_TITLE, HF_MODEL_NAME, NAME
 from livrable_p10.app.agents.nba_agent import NBAEngine
 
 
@@ -18,12 +18,11 @@ from livrable_p10.app.agents.nba_agent import NBAEngine
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)-8s | %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-    handlers=[
-        logging.FileHandler(LOGS_PATH / "main.log"), # Sauvegarde
-    ]
+    datefmt="%Y-%m-%d %H:%M:%S"
 )
+# Initialise la connexion avec les serveurs de Logfire
 logfire.configure()
+# Permet de suivre le cheminement de pensée de l'Agent
 logfire.instrument_pydantic_ai()
 
 # =================== Initialisation des ressources ===================
@@ -64,15 +63,30 @@ if prompt := st.chat_input(f"Posez votre question sur la {NAME}..."):
     # Afficher indicateur + Générer la réponse de l'assistant via LLM
     with st.chat_message("assistant"):
         with st.spinner("Consultation des archives..."):
-            # # ------ Retrieve
-            # # On utilise asyncio.run pour faire le pont entre l'UI synchrone et l'engine async
-            # contexts = asyncio.run(engine.get_context_index(prompt))
-            # # ------- Générate
-            # # Génération de la réponse de l'assistant en utilisant le prompt augmenté
-            # full_response = asyncio.run(engine.generate_response(prompt, contexts))
-            # Appel asynchrone à l'Engine (Agent Pydantic AI)
-            full_response = asyncio.run(engine.run_nba_assistant(prompt))
-            
-            # Ajouter la réponse de l'assistant à l'historique (pour affichage UI)
-            st.markdown(full_response)
-            st.session_state.messages.append({"role": "assistant", "content": full_response})
+            try:
+                # --- Bloc robuste pour gérer la boucle d'événements ---
+                try:
+                    loop = asyncio.get_event_loop()
+                except RuntimeError:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+
+                # # ------ Retrieve
+                # # On utilise asyncio.run pour faire le pont entre l'UI synchrone et l'engine async
+                # contexts = asyncio.run(engine.get_context_index(prompt))
+                # # ------- Générate
+                # # Génération de la réponse de l'assistant en utilisant le prompt augmenté
+                # full_response = asyncio.run(engine.generate_response(prompt, contexts))
+
+                # Appel asynchrone à l'Engine (Agent Pydantic AI)
+                # full_response = asyncio.run(engine.run_nba_assistant(prompt))
+                # asyncio.run() peut parfois lever une erreur RuntimeError dans Streamlit car
+                # il gère lui même les cntextes asynchrones
+                full_response = loop.run_until_complete(engine.run_nba_assistant(prompt))
+
+                # Ajouter la réponse de l'assistant à l'historique (pour affichage UI)
+                st.markdown(full_response)
+                st.session_state.messages.append({"role": "assistant", "content": full_response})
+
+            except Exception as e:
+                st.error(f"Désolé, une erreur technique est survenue : {e}")
