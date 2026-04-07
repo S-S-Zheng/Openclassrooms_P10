@@ -247,7 +247,7 @@ class SQLQueryEngine:
         sql_query = content.replace("```sql", "").replace("```", "").strip()
 
         # Garde fou sur les instructions pour rester en lecture seule
-        forbidden_keywords = ["DROP", "DELETE", "UPDATE", "INSERT", "ALTER"]
+        forbidden_keywords = ["DROP", "DELETE", "UPDATE", "ALTER", "TRUNCATE"]
         if any(keyword in sql_query.upper() for keyword in forbidden_keywords):
             logger.warning(f"Requête non autorisée : {sql_query}")
             raise PermissionError("Accès refusé : opération d'écriture interdite.")
@@ -256,9 +256,9 @@ class SQLQueryEngine:
         # if ";" in sql_query:
         #     sql_query = sql_query.split(';')[0] + ';'
         return (
-            sql.split(';')[0] + ';' 
-            if ';' in sql 
-            else sql
+            sql_query.split(';')[0] + ';' 
+            if ';' in sql_query 
+            else sql_query
         )
 
     # async def _log_report(service, query, sql, status, start_tick):
@@ -293,16 +293,13 @@ class SQLQueryEngine:
             # Correction syntaxe LangChain : .ainvoke() et .content
             response = await self.client.ainvoke(full_prompt)
             content = response.content
-            if content:
-                # On force en string car LangChain peut renvoyer des listes de dict parfois
-                return self._clean_sql_response(str(content))
-            return "Désolé, je n'ai pas pu générer de réponse valide."
+            if not content or len(content) < 5:
+                raise ValueError("Le LLM a renvoyé une réponse SQL vide ou trop courte.")
+            # On force en string car LangChain peut renvoyer des listes de dict parfois
+            return self._clean_sql_response(str(content))
         except Exception as e:
             logger.error(f"Erreur API : {e}")
-            return (
-                "Je suis désolé, une erreur technique m'empêche de répondre."
-                "Veuillez réessayer plus tard."
-            )
+            raise RuntimeError(f"Erreur API : {e}")
 
     def execute_query(self, sql_query: str) -> List[Dict[str, Any]]:
         """Exécute la requête sur la base de données."""
@@ -313,7 +310,7 @@ class SQLQueryEngine:
                 return [dict(row._mapping) for row in result.fetchall()]
         except Exception as e:
             logger.error(f"Erreur exécution SQL : {e}")
-            return [{"error": str(e)}]
+            raise RuntimeError(f"Erreur exécution SQL : {e}")
 
 # ===================================================================
 

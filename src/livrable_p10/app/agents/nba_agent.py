@@ -120,7 +120,7 @@ from livrable_p10.app.utils.config import (
     TOP_P, TEMPERATURE, MAX_TOKENS,
     MISTRAL_API_KEY, BASE_URL, MODEL_NAME
 )
-from livrable_p10.app.utils.prompts import AGENT_SYSTEM_PROMPT_AFTER
+from livrable_p10.app.utils.prompts import AGENT_SYSTEM_PROMPT_AFTER, AGENT_FEW_SHOTS
 
 
 logger = logging.getLogger(__name__)
@@ -139,7 +139,7 @@ class AgentDeps(BaseModel):
 # 1. Création du Provider avec les paramètres Mistral
 # On passe la base_url et l'api_key directement comme admis par ta signature
 mistral_provider = MistralProvider(
-    base_url=BASE_URL,
+    # base_url=BASE_URL,
     api_key=MISTRAL_API_KEY
 )
 # 2. Instanciation du Modèle
@@ -160,8 +160,15 @@ mistral_model = MistralModel(
 nba_agent = Agent(
     mistral_model,
     deps_type=AgentDeps,
-    system_prompt=AGENT_SYSTEM_PROMPT_AFTER,
+    # system_prompt=AGENT_SYSTEM_PROMPT_AFTER,
 )
+@nba_agent.system_prompt
+def add_rules(ctx: RunContext[AgentDeps]) -> str:
+    return AGENT_SYSTEM_PROMPT_AFTER
+
+@nba_agent.system_prompt
+def add_examples(ctx: RunContext[AgentDeps]) -> str:
+    return AGENT_FEW_SHOTS
 
 # --- Outils (Tools) ---
 
@@ -255,7 +262,8 @@ class NBAEngine:
 
         except Exception as e:
             logging.error(f"Erreur Agent : {e}")
-            return f"Une erreur est survenue : {str(e)}"
+            # return f"Une erreur est survenue : {str(e)}"
+            raise RuntimeError(f"L'agent n'a pas pu répondre : {e}")
 
     async def get_eval_data(self, question: str) -> dict:
         """

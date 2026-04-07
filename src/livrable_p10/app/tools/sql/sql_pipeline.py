@@ -28,12 +28,11 @@ def _write_report(service, query, sql, status, start_tick):
         with service.engine.begin() as conn:
             conn.execute(
                 text("""
-                    INSERT INTO reports (created_at, user_query, sql_generated,
+                    INSERT INTO reports (user_query, sql_generated,
                     status_code, response_time_ms)
-                    VALUES (:now, :query, :sql, :status, :time)
+                    VALUES (:query, :sql, :status, :time)
                 """),
                 {
-                    "now": datetime.now().isoformat(),
                     "query": query,
                     "sql": sql,
                     "status": status,
@@ -57,16 +56,16 @@ async def nlp_to_sql_pipeline(query: str) -> str:
 
     try:
         # génère le sql à partir de la requete nlp
-        sql = await service.generate_sql(query)
-        if not sql:
-            # Cas où le LLM ne renvoie rien ou échoue
+        sql_generated = await service.generate_sql(query)
+        if not sql_generated:
             status = "SQL_GEN_FAILED_500"
-            return "Désolé, je n'ai pas pu traduire votre demande en requête SQL."
+            # Report
+            _write_report(service, query, sql_generated, status, start_time)
+            return f"Echec  de la requete sql: {status}."
 
         # lance la requete sql sur la db
-        data = service.execute_query(sql)
+        data = service.execute_query(sql_generated)
         status = "SUCCESS_200"
-
         # Report
         _write_report(service, query, sql_generated, status, start_time)
         if not data:
@@ -80,11 +79,11 @@ async def nlp_to_sql_pipeline(query: str) -> str:
         # Si _clean_sql_response a détecté un mot interdit (DROP, etc.)
         status = "FORBIDDEN_403"
         _write_report(service, query, sql_generated, status, start_time)
-        return "Sécurité : Cette requête contient des commandes non autorisées."
+        return f"Commande non autorisée : {status}"
 
     except Exception as e:
         # Erreur système imprévue (Type 500)
         status = "INTERNAL_ERROR_500"
         _write_report(service, query, sql_generated, status, start_time)
         logger.error(f"Crash tool SQL : {e}")
-        return "Une erreur interne est survenue lors de l'accès aux données."
+        return f"Erreur interne: {status}"

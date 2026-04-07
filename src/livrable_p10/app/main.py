@@ -10,12 +10,19 @@ import logfire
 import logging
 
 
-from livrable_p10.app.utils.config import APP_TITLE, HF_MODEL_NAME, NAME
+from livrable_p10.app.utils.config import APP_TITLE, HF_MODEL_NAME, NAME, LOGS_PATH
 from livrable_p10.app.agents.nba_agent import NBAEngine
 
 
 # =================== Configuration logs ===================
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)-8s | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=[
+        logging.FileHandler(LOGS_PATH / "main.log"), # Sauvegarde
+    ]
+)
 logfire.configure()
 logfire.instrument_pydantic_ai()
 

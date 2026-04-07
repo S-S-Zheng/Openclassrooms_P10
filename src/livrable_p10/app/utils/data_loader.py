@@ -33,6 +33,21 @@ import logging
 import numpy as np
 from tqdm import tqdm # Ajout de tqdm
 
+
+from livrable_p10.app.utils.config import LOGS_PATH
+
+
+# Configuration du logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=[
+        logging.FileHandler(LOGS_PATH / "main.log"), # Sauvegarde
+    ]
+)
+
+
 # --- Importations pour OCR ---
 try:
     import fitz  # PyMuPDF
@@ -60,8 +75,6 @@ except Exception as e:
     easyocr = None
     reader = None
 
-# Configuration du logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # --- Fonctions d'extraction de texte ---
 

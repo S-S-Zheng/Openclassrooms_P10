@@ -81,7 +81,10 @@ from livrable_p10.app.utils.config import (
     # HF_API_KEY,
     QA_PATH,
     RAGAS_OUTPUT,
-    SEARCH_K
+    SEARCH_K,
+    TEMPERATURE,
+    TOP_P,
+    LOGS_PATH
 )
 
 # Configuration Logfire
@@ -90,6 +93,9 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)-8s | %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=[
+        logging.FileHandler(LOGS_PATH / "evaluation.log"), # Sauvegarde
+    ]
 )
 logger = logging.getLogger(__name__)
 
@@ -278,7 +284,10 @@ async def ragas_eval(dataset: EvaluationDataset) -> dict:
     judge_llm = llm_factory(
         model=MODEL_NAME,
         client=client,
-        cache=cache_ragas
+        cache=cache_ragas,
+        max_tokens=2048,
+        temperature=TEMPERATURE,
+        top_p = TOP_P
     )
     judge_embeddings = embedding_factory(
         model=EMBEDDING_MODEL,

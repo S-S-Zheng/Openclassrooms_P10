@@ -84,3 +84,4 @@ NAME = "NBA" # Nom à personnaliser dans l'interface
 # --- Chemins de test et évaluation ---
 QA_PATH = str(ROOT_DIR / "datas" / "qa_pairs")
 RAGAS_OUTPUT = str(ROOT_DIR / "datas" / "qa_pairs" / "ragas.json")
+LOGS_PATH = ROOT_DIR / "datas" / "logs"

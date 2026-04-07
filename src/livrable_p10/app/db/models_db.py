@@ -145,5 +145,5 @@ class Report(Base):
     user_query = Column(Text)
     sql_generated = Column(Text)
 
-    status_code = Column(Integer)
+    status_code = Column(Text)
     response_time_ms = Column(Float)
