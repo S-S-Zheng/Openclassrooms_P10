@@ -9,10 +9,10 @@ Workflow
 * Pydantic valide chaque ligne.
 * SQLAlchemy insère les données proprement.
 """
-
+# Imports
 import pandas as pd
 import logging
-from typing import Tuple
+from typing import Tuple,Dict
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
@@ -59,30 +59,31 @@ def _ingest_players_and_stats(session: Session, df_stats: pd.DataFrame) -> None:
         # (Validation + Mapping des alias)
         # ``model_validate`` utilise les alias pour remplir les champs
         try:
+            # Validation Pydantic
             validated_data = NBAInputSchema.model_validate(row_dict)
+
+            # # --------- Gestion du Joueur (idempotence) -----------
+            player_name = validated_data.player_name
+            if player_name not in player_cache:
+                p = Player(name=player_name)
+                session.add(p)
+                session.flush() # Récupère l'ID généré par la DB
+                player_cache[player_name] = p.id
+
+            #  -------------- Gestion des Stats ---------------
+            # .model_dump() transforme l'objet Pydantic en dict { "points": 25, ... }
+            # On exclut le nom du joueur et le code a 3 lettres
+            stat_fields = validated_data.model_dump(exclude={'player_name', 'team_abbr'})
+
+            stat_entry = Stat(
+                player_id=player_cache[player_name],
+                team_abbr=validated_data.team_abbr,
+                **stat_fields
+            )
+            session.add(stat_entry)
         except Exception as e:
             logger.error(f"Erreur de validation pour le joueur {row.get('Player')}: {e}")
             continue
-
-        # # --------- Gestion du Joueur (idempotence) -----------
-        player_name = validated_data.player_name
-        if player_name not in player_cache:
-            p = Player(name=player_name)
-            session.add(p)
-            session.flush()
-            player_cache[player_name] = p.id
-
-        #  -------------- Gestion des Stats ---------------
-        # .model_dump() transforme l'objet Pydantic en dict { "points": 25, ... }
-        # On exclut le nom du joueur et le code a 3 lettres
-        stat_fields = validated_data.model_dump(exclude={'player_name', 'team_abbr'})
-
-        stat_entry = Stat(
-            player_id=player_cache[player_name],
-            team_abbr=validated_data.team_abbr,
-            **stat_fields
-        )
-        session.add(stat_entry)
 
 # TEAM
 def _ingest_teams(
@@ -90,24 +91,15 @@ def _ingest_teams(
     df_stats: pd.DataFrame,
     df_teams: pd.DataFrame
 ) -> None:
-    """Calcule les agrégations et remplit la table Team."""
+    """
+    Calcule les agrégats par équipe et remplit la table Team.\n
+    Réalise une jointure logique entre les statistiques individuelles 
+    et les informations administratives des franchises.
+    """
     # Evite l'idempotence en effaçant le contenu de la table
     session.query(Team).delete()
 
-    # for _, row in df_teams.iterrows():
-    #     # On transforme la ligne Excel en dictionnaire
-    #     row_dict = row.to_dict()
-
-    #     # On a déjà tout renseigné dans le pydantic, on va donc l'utiliser pour le mapping
-    #     # (Validation + Mapping des alias)
-    #     # ``model_validate`` utilise les alias pour remplir les champs
-    #     try:
-    #         validated_data = TeamInputSchema.model_validate(row_dict)
-    #         team_fields = validated_data.model_dump()
-    #     except Exception as e:
-    #         logger.error(f"Erreur format équipe : {row.get('Code')} - {e}")
-    #         continue
-    # 1. Validation de TOUTES les équipes et stockage dans une liste
+    # Validation Pydantic de TOUTES les équipes et stockage dans une liste
     validated_teams_data = []
     for _, row in df_teams.iterrows():
         try:
@@ -119,7 +111,7 @@ def _ingest_teams(
             continue
     df_teams_checked = pd.DataFrame(validated_teams_data)
 
-    # Agrégation logique métier
+    # Agrégation des statistiques par équipe
     team_stats = df_stats.groupby('Team').agg({
         'Player': 'count',
         'PTS': 'sum',
@@ -133,16 +125,11 @@ def _ingest_teams(
         'TS%': 'mean'
     }).reset_index()
 
+    # Insertion avec correspondance des noms complets
     for _, row in team_stats.iterrows():
         team_abbr = str(row['Team'])
-        # match = df_teams[df_teams['Code'] == team_abbr]
         match = df_teams_checked[df_teams_checked['team_abbr'] == team_abbr]
-        if not match.empty:
-            # full_name = str(match["Nom complet de l'équipe"].iloc[0])
-            full_name = str(match["full_name"].iloc[0])
-        else:
-            logger.warning(f"Erreur de team code, {team_abbr} n'a pas de correspondance...")
-            full_name = "Unknown"
+        full_name = str(match["full_name"].iloc[0]) if not match.empty else "Unknown"
 
         session.add(Team(
             abbreviation=team_abbr,
@@ -180,31 +167,9 @@ def load_excel_data(file_path: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
     # header feuille Données NBA commence à la ligne 2 tandis
     # que pour Equipe et Dictionnaire des données, col'est la ligne 1.
     df_stats = pd.read_excel(file_path, sheet_name="Données NBA", header=1)
-    # df_dict = pd.read_excel(file_path, sheet_name="Dictionnaire des données", header=0)
     df_teams = pd.read_excel(file_path, sheet_name="Equipe", header=0)
 
-    # # Force tous les noms de colonnes en string et strip les espaces
-    # df_stats.columns = [str(col).strip() for col in df_stats.columns]
-
-    # # Filtre des colonnes "fantômes"
-    # # On ne garde que les colonnes qui ne commencent pas par "Unnamed"
-    # df_stats = df_stats.loc[:, ~df_stats.columns.str.contains('^Unnamed', na=False)]
-    # df_teams = df_teams.loc[:, ~df_teams.columns.str.contains('^Unnamed', na=False)]
-
-    # # Application .strip() sur les string
-    # # Sur les headers
-    # for df in [df_stats, df_teams]:
-    #     df.columns = df.columns.str.strip()
-    # # Sur les colonnes concernées
-    # df_stats['Player'] = df_stats['Player'].astype(str).str.strip()
-    # df_stats['Team'] = df_stats['Team'].astype(str).str.strip()
-    # df_teams['Code'] = df_teams['Code'].astype(str).str.strip()
-    # df_teams["Nom complet de l'équipe"] = \
-    #     df_teams["Nom complet de l'équipe"].astype(str).str.strip()
-    # # df_dict['Dictionnaire des données'] = \
-    # #     df_dict['Dictionnaire des données'].astype(str).str.strip()
-
-    # Headers
+    # Nettoyage uniforme des DataFrames
     for df in [df_stats, df_teams]:
         # headers = str + strip()
         df.columns = [str(col).strip() for col in df.columns]
@@ -228,7 +193,7 @@ def load_excel_data(file_path: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
 
 
 def run_etl() -> None:
-    """Orchestre le pipeline ETL complet."""
+    """Exécute le workflow ETL complet (côté tabulaire) sous une transaction unique."""
     engine = create_engine(DATABASE_URL)
     session_factory = sessionmaker(bind=engine)
 
@@ -246,10 +211,10 @@ def run_etl() -> None:
             _ingest_teams(session, df_stats, df_teams)
 
             session.commit()
-            logger.info("Pipeline ETL exécuté avec succès.")
+            logger.info("Ingestion exécutée avec succès.")
         except Exception as e:
             session.rollback()
-            logger.error(f"Échec critique de l'ETL : {e}")
+            logger.error(f"Échec critique de l'ingestion : {e}")
             raise
 
 

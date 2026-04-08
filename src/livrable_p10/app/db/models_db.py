@@ -1,7 +1,7 @@
 """
 Module de définition des modèles de données ORM (Object-Relational Mapping).
 
-Ce module contient les schémas SQL pour PostgreSQL via SQLAlchemy. Il définit
+Ce module contient les schémas SQL pour la base via SQLAlchemy. Il définit
 l'organisation des données stockées, incluant les enregistrements de prédictions
 détaillés et le système de journalisation (logging) pour la traçabilité des requêtes.
 """
@@ -11,7 +11,7 @@ détaillés et le système de journalisation (logging) pour la traçabilité des
 
 # imports
 from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text
-from sqlalchemy.dialects.postgresql import JSONB # Pour Supabase plus tard si besoin
+# from sqlalchemy.dialects.postgresql import JSONB # Pour Supabase plus tard si besoin
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -21,26 +21,29 @@ from livrable_p10.app.db.base import Base
 # ================= DONNÉES MÉTIER (RAG / SQL Tool) =================
 class Player(Base):
     """
-    Table d'identité des joueurs.
+    Table d'identité des joueurs.\n
+    Représente l'entité de base pour l'identification. Chaque joueur est lié
+    à une ou plusieurs lignes de statistiques via une relation 1:N.
 
     Attributes:
         id (int): Clé primaire auto-incrémentée.
+        name (str): Nom du joueur
     """
 
     __tablename__ = "players"
 
     # Identifications
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(50), unique=True, index=True)
+    name = Column(String(50), unique=True, index=True, nullable=False)
 
     # Relations
     # Crée une dépendance des ID avec la table stats (permet la jointure)
     # Créée une relation bidirectionnelle entre stats et players
-    stats = relationship("Stat", back_populates="player")
+    stats = relationship("Stat", back_populates="player", cascade="all, delete-orphan")
 
 class Stat(Base):
     """
-    Table des stats liées a l'id des players.
+    Table des statistiques détaillées par joueur.\n
     """
 
     __tablename__ = "stats"
@@ -95,7 +98,7 @@ class Stat(Base):
 
     # Relations
     # Crée une dépendance des ID avec la table players (permet la jointure)
-    player_id = Column(Integer, ForeignKey("players.id"))
+    player_id = Column(Integer, ForeignKey("players.id"), nullable=False)
     # Créée une relation bidirectionnelle entre stats et players
     player = relationship("Player", back_populates="stats")
 
@@ -108,8 +111,8 @@ class Team(Base):
     __tablename__ = "teams"
 
     id = Column(Integer, primary_key=True)
-    abbreviation = Column(String(3), unique=True, index=True)
-    full_name = Column(String(50))
+    abbreviation = Column(String(3), unique=True, index=True, nullable=False)
+    full_name = Column(String(50), nullable=False)
 
     player_count = Column(Integer)
     total_points = Column(Integer)

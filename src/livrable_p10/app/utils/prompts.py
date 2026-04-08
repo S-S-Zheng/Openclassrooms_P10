@@ -94,7 +94,8 @@ SQL: SELECT p.name, (s.points/s.gp) as PPG,
     WHERE (s.points/s.gp) > 20 
     ORDER BY rTS DESC LIMIT 3;
 
-Question: Quelles sont les stats complètes (Points, Rebonds, Assists) de LeBron James ?
-SQL: SELECT p.name, s.points, s.reb, s.assists FROM players p JOIN stats s ON p.id = s.player_id
-WHERE LOWER(p.name) LIKE LOWER('%LeBron James%');
+Question: Qui est le meilleur marqueur de la saison ?
+SQL: SELECT p.name, ROUND(CAST(s.points AS FLOAT) / s.gp, 1) as PPG
+    FROM players p JOIN stats s ON p.id = s.player_id
+    ORDER BY PPG DESC LIMIT 1;
 """

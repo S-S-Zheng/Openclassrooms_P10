@@ -54,34 +54,22 @@ from ragas.cache import DiskCacheBackend
 from ragas import EvaluationDataset, SingleTurnSample
 from ragas.metrics.collections import (
     AnswerRelevancy,
-    ContextPrecision,
+    # ContextPrecision,
     ContextRecall,
     Faithfulness
 )
 from ragas.llms import llm_factory
 from ragas.embeddings.base import embedding_factory
 
-# from mistralai.client.models import ChatCompletionResponse
-# from mistralai.models import ChatCompletionResponse
-# from langchain_huggingface import HuggingFaceEmbeddings
-# from ragas.embeddings import HuggingFaceEmbeddings
-# from huggingface_hub import AsyncInferenceClient
 
-# from livrable_p10.app.tools.semantic.vector_store import VectorStoreManager
-# from livrable_p10.app.tools.rag.MistralChat import generer_reponse
-# from livrable_p10.app.agents.nba_agent import NBAAgent
 from livrable_p10.app.agents.nba_agent import NBAEngine
 from livrable_p10.app.utils.config import (
     MODEL_NAME,
     EMBEDDING_MODEL,
     MISTRAL_API_KEY,
     BASE_URL,
-    # HF_MODEL_NAME,
-    # HF_EMBEDDING_MODEL,
-    # HF_API_KEY,
     QA_PATH,
     RAGAS_OUTPUT,
-    SEARCH_K,
     TEMPERATURE,
     TOP_P
 )

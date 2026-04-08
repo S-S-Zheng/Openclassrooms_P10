@@ -1,19 +1,48 @@
 """
-Ce module contient la classe NBAEngine. Elle est autonome et asynchrone (pour Ragas),
-mais on peut l'utiliser de manière synchrone pour Streamlit.
+Module principal de l'application Streamlit.
+
+Ce module gère l'interface utilisateur, la gestion de la session de chat,
+et l'orchestration entre l'interface synchrone de Streamlit et le moteur
+asynchrone NBAEngine.
+
+Important
+-----
+Pour le lancer: streamlit run chemin/vers/main.py
 """
 
-# NBAAgent.py
+import os
+import warnings
+
+# Bloque les warnings de dépréciation (LambdaRuntimeClient)
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", message="Accessing LambdaRuntimeClient")
+# Réduit le niveau de log de Transformers
+os.environ["TRANSFORMERS_VERBOSITY"] = "error"
+# ATTENTION on cache juste car spamming de warning dû a transformers + answer_relevancy mais
+# mais il y a dépréciation donc potentiel crash futur...
+
 import streamlit as st
 import asyncio
 import logfire
 import logging
 
 
-from livrable_p10.app.utils.config import APP_TITLE, HF_MODEL_NAME, NAME
+from livrable_p10.app.utils.config import APP_TITLE, NAME, MODEL_NAME
 from livrable_p10.app.agents.nba_agent import NBAEngine
 
 
+# =============================================================================
+# CONFIGURATION DE LA PAGE (Doit être la première commande Streamlit)
+# ATTENTION OBLIGATOIREMENT JUSTE APRÈS LES IMPORTS!
+st.set_page_config(
+    page_title=APP_TITLE,
+    layout="centered", # ou "wide"
+    initial_sidebar_state="auto"
+)
+
+
+# =========================================================
+# LOGS ET RESSOURCES
 # =================== Configuration logs ===================
 logging.basicConfig(
     level=logging.INFO,
@@ -32,12 +61,12 @@ def get_engine():
 
 engine = get_engine()
 
-# =================== UI Streamlit ===================
-st.set_page_config(page_title=APP_TITLE)
-st.title(APP_TITLE)
-st.caption(f"Assistant virtuel pour {NAME} | Modèle: {HF_MODEL_NAME}")
-
+# =====================================================
+# INTERFACE UTILISATEUR (UI)
 # =================== Initialisation de l'historique de conversation ===================
+st.title(APP_TITLE)
+st.caption(f"Assistant virtuel pour {NAME} | Modèle: {MODEL_NAME}")
+
 if "messages" not in st.session_state:
     # Message d'accueil initial
     st.session_state.messages = [{
@@ -53,9 +82,11 @@ for msg in st.session_state.messages: # Maintient la mémoire de la session
     with st.chat_message(msg["role"]): # Gère l'affichage des bulels de messages
         st.markdown(msg["content"])
 
+# ============================================================================
+# INTERACTION CHAT
 # =================== Zone de saisie utilisateur ===================
 if prompt := st.chat_input(f"Posez votre question sur la {NAME}..."):
-    # 1. Ajouter et afficher le message de l'utilisateur
+    # Ajouter et afficher le message de l'utilisateur
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.write(prompt)
@@ -64,22 +95,16 @@ if prompt := st.chat_input(f"Posez votre question sur la {NAME}..."):
     with st.chat_message("assistant"):
         with st.spinner("Consultation des archives..."):
             try:
-                # --- Bloc robuste pour gérer la boucle d'événements ---
+                # --- Gestion de la boucle d'événements asynchrones ---
+                # Streamlit gérant son propre contexte, nous devons récupérer ou créer
+                # une boucle d'événements pour exécuter l'appel asynchrone à l'agent.
                 try:
                     loop = asyncio.get_event_loop()
                 except RuntimeError:
                     loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(loop)
 
-                # # ------ Retrieve
-                # # On utilise asyncio.run pour faire le pont entre l'UI synchrone et l'engine async
-                # contexts = asyncio.run(engine.get_context_index(prompt))
-                # # ------- Générate
-                # # Génération de la réponse de l'assistant en utilisant le prompt augmenté
-                # full_response = asyncio.run(engine.generate_response(prompt, contexts))
-
                 # Appel asynchrone à l'Engine (Agent Pydantic AI)
-                # full_response = asyncio.run(engine.run_nba_assistant(prompt))
                 # asyncio.run() peut parfois lever une erreur RuntimeError dans Streamlit car
                 # il gère lui même les cntextes asynchrones
                 full_response = loop.run_until_complete(engine.run_nba_assistant(prompt))

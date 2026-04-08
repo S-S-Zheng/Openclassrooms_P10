@@ -22,6 +22,8 @@ import logging
 from typing import List,Dict,Any
 
 logger = logging.getLogger(__name__)
+
+
 # ==============================================================
 
 
@@ -57,12 +59,8 @@ def get_clean_and_entitle(
         logging.info("Nettoyage des documents en cours...")
         # On créée une liste des lignes qui composent le document via le séparateur \n
         lines = doc['page_content'].split('\n')
-        # Le titre est dans le header de la page en deuxième ligne (normalement)
+        # Le titre est dans le header de la page en deuxième ligne normalement
         title = lines[1].strip()
-        # OU ALORS LA 11è ligne (si la seconde est vraiment cropée par ...)
-        # autor_badge = " ".join(lines[8:15]).lower()
-        # title = lines[10].strip() if "top 1%" in autor_badge else lines[11].strip()
-        # La copie nettoyée
         cleaned_lines = []
 
         for line in lines:
@@ -86,33 +84,9 @@ def get_clean_and_entitle(
             if "afficher plus de commentaires" in l_lower:
                 break
 
-            # Si la ligne a survécu, on la garde
             cleaned_lines.append(l_strip)
 
-        # # DÉTECTION DU TITRE
-        # title_ref = "rechercher dans r/nba"
-        # title = lines[3].strip()
-        # try:
-        #     # Trouver l'index de la référence qui va nous servir a retrouver le titre
-        #     ref_index = next(
-        #         index for index, text in enumerate(cleaned_lines)
-        #         if text.lower() == title_ref
-        #     )
-        #     # On prend le 2ème élément après la réf (Index + 2 = 2ème)
-        #     potential_title_idx = ref_index + 2
-        #     if potential_title_idx < len(cleaned_lines):
-        #         title = cleaned_lines[potential_title_idx]
-        #     # On supprime la réf de la liste finale
-        #     final_content_lines = [
-        #         line for line in cleaned_lines
-        #         if line.lower() != title_ref
-        #     ]
-        # except StopIteration:
-        #     # Si la réf n'a pas été trouvée, on garde tout
-        #     final_content_lines = cleaned_lines
-
         # ASSEMBLAGE FINALE
-        # doc['page_content'] = f"Sujet: {title}\n\n" + "\n".join(final_content_lines)
         doc['page_content'] = "\n".join(cleaned_lines)
         doc['metadata']["title"] = title
 

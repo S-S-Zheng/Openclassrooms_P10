@@ -51,8 +51,9 @@ Module de définition des schémas Pydantic pour la base de donnée.
 
 
 """
-from pydantic import BaseModel, Field, field_validator
-
+# Imports
+from pydantic import BaseModel, Field, field_validator, ConfigDict
+from typing import Optional
 
 # ======================== STATS (et PLAYER) ========================
 
@@ -374,3 +375,92 @@ class TeamInputSchema(BaseModel):
         alias="Nom complet de l'équipe",
         description="Nom complet de l'équipe"
     )
+
+# ======================== REPORT ========================
+
+
+class ReportInpuSchema(BaseModel):
+    """Schéma de validation pour l'insertion dans la table 'reports'."""
+    user_query: str = Field(..., description="La question posée par l'utilisateur")
+    sql_generated: str = Field(..., description="La requête SQL produite par le LLM")
+    status_code: str = Field(..., description="Ex: SUCCESS_200, FORBIDDEN_403, etc.")
+    response_time_ms: float = Field(..., description="Temps de réponse en millisecondes")
+
+
+# ======================== SQL OUTPUT ====================
+
+
+class SQLOutputSchema(BaseModel):
+    """
+    Schéma de sortie pour les résultats SQL
+    """
+    # On autorise les colonnes imprévues.
+    # Critique pour l'agent plantage fréquent sinon (sauf si il n'agrègeait pas)
+    model_config = ConfigDict(extra='allow')
+
+    # Identifiants
+    name: Optional[str] = Field(
+        None,
+        description="Nom du joueur (issu de la table players)")
+    team_abbr: Optional[str] = Field(
+        None,
+        min_length=3,
+        max_length=3,
+        description="Code équipe a 3 lettres")
+    full_name: Optional[str] = Field(
+        None,
+        description="Nom complet de l'équipe")
+
+    # Colonnes des stats à passer en Optional[float] car le SQL peut les utiliser pour agreger
+    age: Optional[float] = Field(None, description="Âge du joueur")
+    gp: Optional[float] = Field(None, description="Matchs joués")
+    win: Optional[float] = Field(None, description="Victoires")
+    lose: Optional[float] = Field(None, description="Défaites")
+    time_played: Optional[float] = Field(None, description="Minutes moyennes")
+    points: Optional[float] = Field(None, description="Points marqués")
+    fgm: Optional[float] = Field(None, description="Tirs réussis")
+    fga: Optional[float] = Field(None, description="Tirs tentés")
+    fg_pct: Optional[float] = Field(None, description="Pourcentage de réussite aux tirs")
+    three_p_tried: Optional[float] = Field(None, description="3 points tentés")
+    three_p_pct: Optional[float] = Field(None, description="Pourcentage à 3 points")
+    ftm: Optional[float] = Field(None, description="Lancers francs réussis")
+    fta: Optional[float] = Field(None, description="Lancers francs tentés")
+    ft_pct: Optional[float] = Field(None, description="Pourcentage aux lancers francs")
+    oreb: Optional[float] = Field(None, description="Rebonds offensifs")
+    dreb: Optional[float] = Field(None, description="Rebonds défensifs")
+    reb: Optional[float] = Field(None, description="Rebonds totaux")
+    assists: Optional[float] = Field(None, description="Passes décisives")
+    turnovers: Optional[float] = Field(None, description="Balles perdues")
+    steal: Optional[float] = Field(None, description="Interceptions")
+    blocks: Optional[float] = Field(None, description="Contres")
+    faults: Optional[float] = Field(None, description="Fautes personnelles")
+    fantasy_points: Optional[float] = Field(None, description="Fantasy Points")
+    doubles: Optional[float] = Field(None, description="Double-doubles")
+    triples: Optional[float] = Field(None, description="Triple-doubles")
+    plus_minus: Optional[float] = Field(None, description="Plus-Minus")
+    off_rate: Optional[float] = Field(None, description="Offensive Rating")
+    def_rate: Optional[float] = Field(None, description="Defensive Rating")
+    net_rate: Optional[float] = Field(None, description="Net Rating")
+    assists_pct: Optional[float] = Field(None, description="Pourcentage d'assists")
+    assists_turnovers_rate: Optional[float] = Field(None, description="Ratio AST/TO")
+    assists_rate: Optional[float] = Field(None, description="Ratio d'assists")
+    oreb_pct: Optional[float] = Field(None, description="Pourcentage rebonds offensifs")
+    dreb_pct: Optional[float] = Field(None, description="Pourcentage rebonds défensifs")
+    reb_pct: Optional[float] = Field(None, description="Pourcentage rebonds totaux")
+    turnovers_rate: Optional[float] = Field(None, description="Ratio de pertes de balle")
+    efg_pct: Optional[float] = Field(None, description="Effective Field Goal %")
+    ts_pct: Optional[float] = Field(None, description="True Shooting %")
+    usg_pct: Optional[float] = Field(None, description="Usage Rate")
+    pace: Optional[float] = Field(None, description="Rythme de jeu (Pace)")
+    pie: Optional[float] = Field(None, description="Player Impact Estimate")
+    poss: Optional[float] = Field(None, description="Possessions totales")
+
+    # Colonnes supp dans team à passer en Optional[float] car le SQL peut les utiliser pour agreger
+    player_count: Optional[float] = Field(None, description="Nombre de joueurs dans l'équipe")
+    total_points: Optional[float] = Field(None, description="Points totaux de l'équipe")
+    mean_ts: Optional[float] = Field(None, description="Moyenne True Shooting de l'équipe")
+    mean_pie: Optional[float] = Field(None, description="Moyenne PIE de l'équipe")
+
+    # Variables qui peuvent être inventé par agregation par le LLM (exemples)
+    PPG: Optional[float] = Field(None, description="Points par match (calculé)")
+    rTS: Optional[float] = Field(None, description="Relative True Shooting (calculé)")

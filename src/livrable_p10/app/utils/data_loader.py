@@ -22,7 +22,7 @@ IMPORTANT
     pas adaptés. Les excel seront traités par la base de donnée (``load_excel_to_db.py``)
 * Fait partie du groupe de fichiers fourni
 """
-# utils/data_loader.py
+# Imports
 import os
 import requests
 import zipfile
@@ -35,6 +35,9 @@ from tqdm import tqdm # Ajout de tqdm
 
 
 logger = logging.getLogger(__name__)
+
+
+# ===========================================================
 
 
 # --- Importations pour OCR ---
@@ -179,59 +182,6 @@ def extract_text_from_txt(file_path: str) -> Optional[str]:
         logging.error(f"Erreur extraction TXT {file_path}: {e}")
         return None
 
-# def extract_text_from_csv(file_path: str) -> Optional[str]:
-#     """Extrait le texte d'un fichier CSV (convertit en string)."""
-#     try:
-#         import pandas as pd
-#         try:
-#             df = pd.read_csv(file_path)
-#         except UnicodeDecodeError:
-#             df = pd.read_csv(file_path, encoding='latin1') # Essayer un autre encodage courant
-#         except Exception as read_e:
-#             logging.warning(
-#                 f"Erreur lecture CSV {file_path}: {read_e}. Tentative avec séparateur ';'"
-#             )
-#             try:
-#                 df = pd.read_csv(file_path, sep=';')
-#             except UnicodeDecodeError:
-#                 df = pd.read_csv(file_path, sep=';', encoding='latin1')
-#             except Exception as read_e2:
-#                 logging.error(f"Impossible de lire le CSV {file_path}: {read_e2}")
-#                 return None
-
-#         text = df.to_string()
-#         logging.info(f"Texte extrait de CSV: {file_path} ({len(text)} caractères)")
-#         return text
-#     except ImportError:
-#         logging.warning("Pandas non installé. Impossible de lire les fichiers CSV.")
-#         return None
-#     except Exception as e:
-#         logging.error(f"Erreur extraction CSV {file_path}: {e}")
-#         return None
-
-# def extract_text_from_excel(file_path: str) -> Optional[Union[str, Dict[str, str]]]:
-#     """Extrait le texte de chaque feuille d'un fichier Excel."""
-#     try:
-#         import pandas as pd
-#         # Lire toutes les feuilles dans un dictionnaire de DataFrames
-#         excel_file = pd.ExcelFile(file_path)
-#         sheets_data = {}
-#         for sheet_name in excel_file.sheet_names:
-#             df = excel_file.parse(sheet_name)
-#             sheets_data[sheet_name] = df.to_string()
-        
-#         logging.info(f"Texte extrait de {len(sheets_data)} feuille(s) dans Excel: {file_path}")
-#         # Si une seule feuille, retourne directement le texte pour la compatibilité
-#         if len(sheets_data) == 1:
-#             return list(sheets_data.values())[0]
-#         return sheets_data
-#     except ImportError:
-#         logging.warning("Pandas ou openpyxl non installé. Impossible de lire les fichiers Excel.")
-#         return None
-#     except Exception as e:
-#         logging.error(f"Erreur extraction Excel {file_path}: {e}")
-#         return None
-
 # --- Fonctions de chargement ---
 
 def download_and_extract_zip(url: str, output_dir: str) -> bool:
@@ -298,12 +248,6 @@ def load_and_parse_files(input_dir: str) -> List[Dict[str, Any]]:
                 extracted_content = extract_text_from_docx(str(file_path))
             elif ext == ".txt":
                 extracted_content = extract_text_from_txt(str(file_path))
-            # On retire les fonctions de lecture sur les sources tabulaires.
-            # elif ext == ".csv":
-            #     extracted_content = extract_text_from_csv(str(file_path))
-            # elif ext in [".xlsx", ".xls"]:
-            #     extracted_content = extract_text_from_excel(str(file_path))
-            # Suppression de la gestion des fichiers HTML
             else:
                 logging.warning(f"Type de fichier non supporté ignoré: {relative_path}")
                 continue
@@ -311,29 +255,7 @@ def load_and_parse_files(input_dir: str) -> List[Dict[str, Any]]:
             if not extracted_content:
                 logging.warning(f"Aucun contenu n'a pu être extrait de {relative_path}")
                 continue
-            # # Si c'est un dictionnaire (plusieurs feuilles Excel), créer un doc par feuille
-            # if isinstance(extracted_content, dict):
-            #     for sheet_name, text in extracted_content.items():
-            #         documents.append({
-            #             "page_content": text,
-            #             "metadata": {
-            #                 "source": f"{str(relative_path)} (Feuille: {sheet_name})",
-            #                 "filename": file_path.name,
-            #                 "sheet": sheet_name,
-            #                 "category": source_folder,
-            #                 "full_path": str(file_path.resolve())
-            #             }
-            #         })
-            # else: # Pour tous les autres types de fichiers
-            #     documents.append({
-            #         "page_content": extracted_content,
-            #         "metadata": {
-            #             "source": str(relative_path),
-            #             "filename": file_path.name,
-            #             "category": source_folder,
-            #             "full_path": str(file_path.resolve())
-            #         }
-            #     })
+
             documents.append({
                     "page_content": extracted_content,
                     "metadata": {
