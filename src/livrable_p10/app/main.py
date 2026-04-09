@@ -73,8 +73,8 @@ if "messages" not in st.session_state:
         "role": "assistant",
         "content": (
             f"Bonjour ! Je suis votre analyste IA pour la {NAME}. Posez-moi vos questions sur"
-            "les équipes, les joueurs ou les statistiques, et je vous répondrai en me basant"
-            "sur les données les plus récentes."
+            " les équipes, les joueurs ou les statistiques, et je vous répondrai en me basant"
+            " sur les données les plus récentes."
         )
     }]
 # =================== Affichage historique ===================

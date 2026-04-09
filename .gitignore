@@ -48,7 +48,6 @@ data/
 datas/
 
 # Jupyter Notebook
-notebooks/
 .ipynb_checkpoints
 
 # Index faiss
