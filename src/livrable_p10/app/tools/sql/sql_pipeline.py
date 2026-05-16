@@ -5,24 +5,22 @@ Ce module fait le pont entre la question brute de l'utilisateur et le moteur SQL
 Il gère l'orchestration, la journalisation (reporting) et la gestion des erreurs
 métier (données manquantes, permissions).
 """
+
 # Imports
 import logging
 import time
-from sqlalchemy import text
-from typing import Optional
 
+from sqlalchemy import text
 
 from livrable_p10.app.tools.sql.sql_tool import SQLQueryEngine
-from livrable_p10.app.utils.config import (
-    DATABASE_URL
-)
+from livrable_p10.app.utils.config import DATABASE_URL
 from livrable_p10.app.utils.schemas import ReportInpuSchema
 
 # Configuration du logger
 logger = logging.getLogger(__name__)
 
 
-# ========================== Helper de rapport ============================
+# ========================== Helper de rapport ============================
 def _write_report(service, query, sql, status, start_tick):
     """
     Monitore de manière synchrone les métadonnées de la requête.
@@ -36,12 +34,9 @@ def _write_report(service, query, sql, status, start_tick):
     """
     duration = int((time.monotonic() - start_tick) * 1000)
     try:
-        # Check up Pydantic
+        # Check up Pydantic
         report_data = ReportInpuSchema(
-            user_query=query,
-            sql_generated=sql,
-            status_code=status,
-            response_time_ms=duration
+            user_query=query, sql_generated=sql, status_code=status, response_time_ms=duration
         )
         with service.engine.begin() as conn:
             conn.execute(
@@ -49,12 +44,14 @@ def _write_report(service, query, sql, status, start_tick):
                     INSERT INTO reports (user_query, sql_generated, status_code, response_time_ms)
                     VALUES (:user_query, :sql_generated, :status_code, :response_time_ms)
                 """),
-                report_data.model_dump() # Convertit l'objet Pydantic en dict
+                report_data.model_dump(),  # Convertit l'objet Pydantic en dict
             )
     except Exception as e:
         logger.error(f"Erreur écriture report : {e}")
 
+
 # ===============================================================
+
 
 async def nlp_to_sql_pipeline(query: str) -> str:
     """
@@ -96,7 +93,7 @@ async def nlp_to_sql_pipeline(query: str) -> str:
         # Report
         _write_report(service, query, sql_generated, status, start_time)
 
-        # Si SUCCESS_200 mais retour vide
+        # Si SUCCESS_200 mais retour vide
         if not data:
             return (
                 f"La requête a fonctionné ({sql_generated}) mais rien n'a été trouvé."

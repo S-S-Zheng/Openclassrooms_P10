@@ -15,7 +15,7 @@ réinitialisation (drop & create) pour les environnements de test ou de dévelop
 # Sinon le registre db restera vide et metadata.create_all ne fera rien et sans lever d'erreur!
 from livrable_p10.app.db.base import Base  # noqa: E402 # Ruff veut les imports avant tout, pb ici
 from livrable_p10.app.db.database import base_engine  # noqa: E402
-from livrable_p10.app.db.models_db import Team,Report,Stat,Player # noqa: E402
+
 # Nécéssaires  pour que SQLAlchemy "découvre" les tables
 
 # ====================== Création de la DB ============================
@@ -59,7 +59,7 @@ def init_db(reset_tables=False, engine=base_engine):
         raise e
 
 
-# =============================================
+# =============================================
 
-if __name__ == "__main__": # pragma: no cover
+if __name__ == "__main__":  # pragma: no cover
     init_db()

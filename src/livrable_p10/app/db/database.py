@@ -14,10 +14,10 @@ et fournit des générateurs de sessions pour l'API et les scripts utilitaires.
 # imports
 import logging
 from contextlib import contextmanager
+
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
 
 from livrable_p10.app.utils.config import DATABASE_URL
 
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 # =========================== SQLite ====================================
 logging.info("Utilisation de SQLite...")
-# 'check_same_thread' est spécifique à SQLite pour autoriser FastAPI 
+# 'check_same_thread' est spécifique à SQLite pour autoriser FastAPI
 # à utiliser la même connexion sur plusieurs requêtes.
 base_engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 
