@@ -1,0 +1,88 @@
+# CD pour déploiement auto du code validé vers Hugging Face Spaces
+# S'éxé après CI validée seulement sur main
+---
+name: CD Pipeline
+
+# Déclencheurs
+# Lance le workflow seulement si succès du workflow CI
+on:
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    branches:
+      - main
+    types:
+      - completed
+
+# Permissions nécessaires pour le workflow
+permissions:
+  contents: read
+
+# Jobs
+jobs:
+  # job de déploiement
+  deploy:
+    name: Deploy to Hugging Face Spaces
+    runs-on: ubuntu-latest
+    # Le déploiement ne se fait que si ci est un succès et sur la branche main
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main'
+    # Déf des secrets au niveau du job deploy pour acces dans tous les steps
+    env:
+      HF_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
+      HF_USERNAME: ${{ vars.HUGGINGFACE_USERNAME }}
+      HF_SPACE_NAME: ${{ vars.HUGGINGFACE_SPACE_NAME }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        # Clone tout l'historique du dépôt
+        with:
+          fetch-depth: 0
+          # telecharge le vrai fichier "lourd" et pas le pointeur LFS
+          lfs: true
+
+      - name: Prepare HF config md
+        run: |
+          cat << EOF > README.md
+          ---
+          title: NBA assistant
+          colorFrom: blue
+          colorTo: purple
+          sdk: docker
+          app_port: 7860
+          tags:
+          - streamlit
+          pinned: true
+          license: mit
+          ---
+          EOF
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # - name: Install dependencies for Smoke Test
+      #   run: pip install onnxruntime
+
+      # - name: Run Smoke Test
+      #   run: python smoke_test.py # On valide avant de lancer le build Docker
+
+      - name: Login to Hugging Face
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "Github Actions"
+
+      - name: Push to HF
+        env:
+          HF_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
+          HF_REPO: ${{ vars.HUGGINGFACE_USERNAME }}/${{ vars.HUGGINGFACE_SPACE_NAME }}
+        run: |
+          chmod +x deploy_hf.sh
+          ./deploy_hf.sh
+
+      - name: Notify deployment
+        if: success()
+        run: |
+          echo "Déploiement réussi sur Hugging Face Spaces"
+          echo "URL: https://huggingface.co/spaces/${HF_USERNAME}/${HF_SPACE_NAME}"

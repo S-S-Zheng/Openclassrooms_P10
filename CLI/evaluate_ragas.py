@@ -259,7 +259,7 @@ async def ragas_eval(dataset: EvaluationDataset) -> dict:
     )
     # client = AsyncInferenceClient(
     #     model=HF_MODEL_NAME,
-    #     token=HF_API_KEY
+    #     token=HUGGINGFACE_TOKEN
     # )
 
     # Utilisation des factories pour obtenir des objets InstructorLLM modernes
