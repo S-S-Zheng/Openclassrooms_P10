@@ -34,6 +34,7 @@ wheels/
 *.log
 logs/
 .logfire/
+.ruff_cache
 
 # Fichiers temporaires
 .DS_Store
@@ -44,15 +45,17 @@ logs/
 *~
 
 # Fichiers de données
-data/
-datas/
+datas/*
+!datas/NBA_database/
+datas/NBA_database/*
+!datas/NBA_database/interactions.db
+!datas/vector_db/
+datas/vector_db/*
+!datas/vector_db/faiss_index.idx
+!datas/vector_db/document_chunks.pkl
 
 # Jupyter Notebook
 .ipynb_checkpoints
 
-# Index faiss
-vector_db/
-
 # Autres
 old/
-initial/
