@@ -21,23 +21,22 @@ os.environ["TRANSFORMERS_VERBOSITY"] = "error"
 # ATTENTION on cache juste car spamming de warning dû a transformers + answer_relevancy mais
 # mais il y a dépréciation donc potentiel crash futur...
 
-import streamlit as st
-import asyncio
-import logfire
-import logging
+import asyncio  # noqa: E402
+import logging  # noqa: E402
 
+import logfire  # noqa: E402
+import streamlit as st  # noqa: E402
 
-from livrable_p10.app.utils.config import APP_TITLE, NAME, MODEL_NAME
-from livrable_p10.app.agents.nba_agent import NBAEngine
-
+from livrable_p10.app.agents.nba_agent import NBAEngine  # noqa: E402
+from livrable_p10.app.utils.config import APP_TITLE, MODEL_NAME, NAME  # noqa: E402
 
 # =============================================================================
 # CONFIGURATION DE LA PAGE (Doit être la première commande Streamlit)
 # ATTENTION OBLIGATOIREMENT JUSTE APRÈS LES IMPORTS!
 st.set_page_config(
     page_title=APP_TITLE,
-    layout="centered", # ou "wide"
-    initial_sidebar_state="auto"
+    layout="centered",  # ou "wide"
+    initial_sidebar_state="auto",
 )
 
 
@@ -47,17 +46,19 @@ st.set_page_config(
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)-8s | %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 # Initialise la connexion avec les serveurs de Logfire
 logfire.configure()
-# Permet de suivre le cheminement de pensée de l'Agent
+# Permet de suivre le cheminement de pensée de l'Agent
 logfire.instrument_pydantic_ai()
+
 
 # =================== Initialisation des ressources ===================
 @st.cache_resource
 def get_engine():
-    return NBAEngine() # Charge tout en mémoire
+    return NBAEngine()  # Charge tout en mémoire
+
 
 engine = get_engine()
 
@@ -69,17 +70,19 @@ st.caption(f"Assistant virtuel pour {NAME} | Modèle: {MODEL_NAME}")
 
 if "messages" not in st.session_state:
     # Message d'accueil initial
-    st.session_state.messages = [{
-        "role": "assistant",
-        "content": (
-            f"Bonjour ! Je suis votre analyste IA pour la {NAME}. Posez-moi vos questions sur"
-            " les équipes, les joueurs ou les statistiques, et je vous répondrai en me basant"
-            " sur les données les plus récentes."
-        )
-    }]
+    st.session_state.messages = [
+        {
+            "role": "assistant",
+            "content": (
+                f"Bonjour ! Je suis votre analyste IA pour la {NAME}. Posez-moi vos questions sur"
+                " les équipes, les joueurs ou les statistiques, et je vous répondrai en me basant"
+                " sur les données les plus récentes."
+            ),
+        }
+    ]
 # =================== Affichage historique ===================
-for msg in st.session_state.messages: # Maintient la mémoire de la session
-    with st.chat_message(msg["role"]): # Gère l'affichage des bulels de messages
+for msg in st.session_state.messages:  # Maintient la mémoire de la session
+    with st.chat_message(msg["role"]):  # Gère l'affichage des bulels de messages
         st.markdown(msg["content"])
 
 # ============================================================================
@@ -105,8 +108,8 @@ if prompt := st.chat_input(f"Posez votre question sur la {NAME}..."):
                     asyncio.set_event_loop(loop)
 
                 # Appel asynchrone à l'Engine (Agent Pydantic AI)
-                # asyncio.run() peut parfois lever une erreur RuntimeError dans Streamlit car
-                # il gère lui même les cntextes asynchrones
+                # asyncio.run() peut parfois lever une erreur RuntimeError dans Streamlit car
+                # il gère lui même les cntextes asynchrones
                 full_response = loop.run_until_complete(engine.run_nba_assistant(prompt))
 
                 # Ajouter la réponse de l'assistant à l'historique (pour affichage UI)

@@ -22,17 +22,18 @@ IMPORTANT
     pas adaptés. Les excel seront traités par la base de donnée (``load_excel_to_db.py``)
 * Fait partie du groupe de fichiers fourni
 """
-# Imports
-import os
-import requests
-import zipfile
-import io
-from pathlib import Path
-from typing import List, Dict, Optional, Any
-import logging
-import numpy as np
-from tqdm import tqdm # Ajout de tqdm
 
+# Imports
+import io
+import logging
+import os
+import zipfile
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import numpy as np
+import requests
+from tqdm import tqdm  # Ajout de tqdm
 
 logger = logging.getLogger(__name__)
 
@@ -42,13 +43,13 @@ logger = logging.getLogger(__name__)
 
 # --- Importations pour OCR ---
 try:
+    import easyocr
     import fitz  # PyMuPDF
     from PIL import Image
-    import easyocr
 
     # Initialiser le lecteur EasyOCR une seule fois
     logging.info("Initialisation du lecteur EasyOCR...")
-    reader = easyocr.Reader(['en', 'fr']) 
+    reader = easyocr.Reader(["en", "fr"])
     logging.info("Lecteur EasyOCR initialisé.")
 
 except ImportError as e:
@@ -70,6 +71,7 @@ except Exception as e:
 
 # --- Fonctions d'extraction de texte ---
 
+
 def extract_text_from_pdf_with_ocr(file_path: str) -> Optional[str]:
     """Extrait le texte d'un fichier PDF en utilisant l'OCR (EasyOCR)."""
     if not fitz or not reader:
@@ -82,13 +84,13 @@ def extract_text_from_pdf_with_ocr(file_path: str) -> Optional[str]:
         # Utiliser tqdm pour la barre de progression
         for page_num in tqdm(range(len(doc)), desc=f"OCR de {os.path.basename(file_path)}"):
             page = doc.load_page(page_num)
-            pix = page.get_pixmap(matrix=fitz.Matrix(2, 2)) # Augmenter la résolution pour l'OCR
-            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples) # type:ignore
-            
+            pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))  # Augmenter la résolution pour l'OCR
+            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)  # type:ignore
+
             try:
                 img_np = np.array(img)
                 results = reader.readtext(img_np)
-                page_text = "\n".join([res[1] for res in results]) # type:ignore
+                page_text = "\n".join([res[1] for res in results])  # type:ignore
                 text_content.append(page_text)
                 # logging.info(f"OCR effectuée sur la page {page_num + 1} de {file_path}
                 # avec EasyOCR") # Commenté pour éviter le spam de logs avec tqdm
@@ -102,9 +104,7 @@ def extract_text_from_pdf_with_ocr(file_path: str) -> Optional[str]:
         doc.close()
         full_text = "\n".join(text_content).strip()
         if full_text:
-            logging.info(
-                f"Texte extrait via OCR de PDF: {file_path} ({len(full_text)} caractères)"
-            )
+            logging.info(f"Texte extrait via OCR de PDF: {file_path} ({len(full_text)} caractères)")
             return full_text
         else:
             logging.warning(f"Aucun texte significatif extrait via OCR de {file_path}.")
@@ -112,6 +112,7 @@ def extract_text_from_pdf_with_ocr(file_path: str) -> Optional[str]:
     except Exception as e:
         logging.error(f"Erreur lors de l'ouverture ou du traitement OCR du PDF {file_path}: {e}")
         return None
+
 
 def extract_text_from_pdf(file_path: str) -> Optional[str]:
     """
@@ -125,10 +126,11 @@ def extract_text_from_pdf(file_path: str) -> Optional[str]:
     """
     try:
         from PyPDF2 import PdfReader
+
         reader = PdfReader(file_path)
         text = "".join(page.extract_text() + "\n" for page in reader.pages if page.extract_text())
-        
-        if len(text.strip()) < 100: # Si très peu de texte est extrait, tenter l'OCR
+
+        if len(text.strip()) < 100:  # Si très peu de texte est extrait, tenter l'OCR
             logging.info(
                 f"Peu de texte trouvé dans {file_path} via extraction standard"
                 f"({len(text.strip())} caractères). Tentative d'OCR..."
@@ -140,8 +142,8 @@ def extract_text_from_pdf(file_path: str) -> Optional[str]:
                 logging.warning(
                     f"L'OCR n'a pas non plus produit de texte significatif pour {file_path}."
                 )
-                return text # Retourne le peu de texte trouvé ou vide
-        
+                return text  # Retourne le peu de texte trouvé ou vide
+
         logging.info(f"Texte extrait de PDF: {file_path} ({len(text)} caractères)")
         return text
     except Exception as e:
@@ -155,7 +157,8 @@ def extract_text_from_pdf(file_path: str) -> Optional[str]:
         else:
             logging.warning(
                 "L'OCR n'a pas non plus produit de texte significatif après échec"
-                f"de l'extraction standard pour {file_path}.")
+                f"de l'extraction standard pour {file_path}."
+            )
             return None
 
 
@@ -163,6 +166,7 @@ def extract_text_from_docx(file_path: str) -> Optional[str]:
     """Extrait le texte d'un fichier Word DOCX."""
     try:
         import docx
+
         doc = docx.Document(file_path)
         text = "\n".join(para.text for para in doc.paragraphs if para.text)
         logging.info(f"Texte extrait de DOCX: {file_path} ({len(text)} caractères)")
@@ -171,10 +175,11 @@ def extract_text_from_docx(file_path: str) -> Optional[str]:
         logging.error(f"Erreur extraction DOCX {file_path}: {e}")
         return None
 
+
 def extract_text_from_txt(file_path: str) -> Optional[str]:
     """Extrait le texte d'un fichier texte brut."""
     try:
-        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
             text = f.read()
         logging.info(f"Texte extrait de TXT: {file_path} ({len(text)} caractères)")
         return text
@@ -182,7 +187,9 @@ def extract_text_from_txt(file_path: str) -> Optional[str]:
         logging.error(f"Erreur extraction TXT {file_path}: {e}")
         return None
 
+
 # --- Fonctions de chargement ---
+
 
 def download_and_extract_zip(url: str, output_dir: str) -> bool:
     """Télécharge un fichier ZIP depuis une URL et l'extrait."""
@@ -212,6 +219,7 @@ def download_and_extract_zip(url: str, output_dir: str) -> bool:
         logging.error(f"Erreur inattendue lors du téléchargement/extraction: {e}")
         return False
 
+
 def load_and_parse_files(input_dir: str) -> List[Dict[str, Any]]:
     """
     Charge et transforme tous les fichiers d'un répertoire en documents standardisés.\n
@@ -236,7 +244,7 @@ def load_and_parse_files(input_dir: str) -> List[Dict[str, Any]]:
             relative_path = file_path.relative_to(input_path)
             source_folder = relative_path.parts[0] if len(relative_path.parts) > 1 else "root"
             ext = file_path.suffix.lower()
-            
+
             logging.debug(
                 f"Traitement du fichier: {relative_path} (Dossier source: {source_folder})"
             )
@@ -256,15 +264,17 @@ def load_and_parse_files(input_dir: str) -> List[Dict[str, Any]]:
                 logging.warning(f"Aucun contenu n'a pu être extrait de {relative_path}")
                 continue
 
-            documents.append({
+            documents.append(
+                {
                     "page_content": extracted_content,
                     "metadata": {
                         "source": str(relative_path),
                         "filename": file_path.name,
                         "category": source_folder,
-                        "full_path": str(file_path.resolve())
-                    }
-                })
+                        "full_path": str(file_path.resolve()),
+                    },
+                }
+            )
 
     logging.info(f"{len(documents)} documents chargés et parsés.")
     return documents

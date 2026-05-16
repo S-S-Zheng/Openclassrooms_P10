@@ -11,6 +11,7 @@ détaillés et le système de journalisation (logging) pour la traçabilité des
 
 # imports
 from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text
+
 # from sqlalchemy.dialects.postgresql import JSONB # Pour Supabase plus tard si besoin
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -41,6 +42,7 @@ class Player(Base):
     # Créée une relation bidirectionnelle entre stats et players
     stats = relationship("Stat", back_populates="player", cascade="all, delete-orphan")
 
+
 class Stat(Base):
     """
     Table des statistiques détaillées par joueur.\n
@@ -52,55 +54,56 @@ class Stat(Base):
     id = Column(Integer, primary_key=True)
     team_abbr = Column(String(3), ForeignKey("teams.abbreviation"), index=True)
 
-    age= Column(Integer)
-    gp= Column(Integer)
-    win= Column(Integer)
-    lose= Column(Integer)
-    time_played= Column(Float)
-    points= Column(Integer)
-    fgm= Column(Integer)
-    fga= Column(Integer)
-    fg_pct= Column(Float)
-    fifteen= Column(Integer)
-    three_p_tried= Column(Integer)
-    three_p_pct= Column(Float)
-    ftm= Column(Integer)
-    fta= Column(Integer)
-    ft_pct= Column(Float)
-    oreb= Column(Integer)
-    dreb= Column(Integer)
-    reb= Column(Integer)
-    assists= Column(Integer)
-    turnovers= Column(Integer)
-    steal= Column(Integer)
-    blocks= Column(Integer)
-    faults= Column(Integer)
-    fantasy_points= Column(Integer)
-    doubles= Column(Integer)
-    triples= Column(Integer)
-    plus_minus= Column(Float)
-    off_rate= Column(Float)
-    def_rate= Column(Float)
-    net_rate= Column(Float)
-    assists_pct= Column(Float)
-    assists_turnovers_rate= Column(Float)
-    assists_rate= Column(Float)
-    oreb_pct= Column(Float)
-    dreb_pct= Column(Float)
-    reb_pct= Column(Float)
-    turnovers_rate= Column(Float)
-    efg_pct= Column(Float)
-    ts_pct= Column(Float)
-    usg_pct= Column(Float)
-    pace= Column(Float)
-    pie= Column(Float)
-    poss= Column(Integer)
+    age = Column(Integer)
+    gp = Column(Integer)
+    win = Column(Integer)
+    lose = Column(Integer)
+    time_played = Column(Float)
+    points = Column(Integer)
+    fgm = Column(Integer)
+    fga = Column(Integer)
+    fg_pct = Column(Float)
+    fifteen = Column(Integer)
+    three_p_tried = Column(Integer)
+    three_p_pct = Column(Float)
+    ftm = Column(Integer)
+    fta = Column(Integer)
+    ft_pct = Column(Float)
+    oreb = Column(Integer)
+    dreb = Column(Integer)
+    reb = Column(Integer)
+    assists = Column(Integer)
+    turnovers = Column(Integer)
+    steal = Column(Integer)
+    blocks = Column(Integer)
+    faults = Column(Integer)
+    fantasy_points = Column(Integer)
+    doubles = Column(Integer)
+    triples = Column(Integer)
+    plus_minus = Column(Float)
+    off_rate = Column(Float)
+    def_rate = Column(Float)
+    net_rate = Column(Float)
+    assists_pct = Column(Float)
+    assists_turnovers_rate = Column(Float)
+    assists_rate = Column(Float)
+    oreb_pct = Column(Float)
+    dreb_pct = Column(Float)
+    reb_pct = Column(Float)
+    turnovers_rate = Column(Float)
+    efg_pct = Column(Float)
+    ts_pct = Column(Float)
+    usg_pct = Column(Float)
+    pace = Column(Float)
+    pie = Column(Float)
+    poss = Column(Integer)
 
     # Relations
     # Crée une dépendance des ID avec la table players (permet la jointure)
     player_id = Column(Integer, ForeignKey("players.id"), nullable=False)
     # Créée une relation bidirectionnelle entre stats et players
     player = relationship("Player", back_populates="stats")
+
 
 class Team(Base):
     """
@@ -121,11 +124,13 @@ class Team(Base):
     total_losses = Column(Integer)
     total_fault = Column(Integer)
     mean_pie = Column(Float)
-    mean_pace= Column(Float)
+    mean_pace = Column(Float)
     mean_poss = Column(Float)
     mean_ts = Column(Float)
 
+
 # ================= MONITORING =================
+
 
 class Report(Base):
     """

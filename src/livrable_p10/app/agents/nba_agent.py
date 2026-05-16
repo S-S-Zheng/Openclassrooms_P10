@@ -1,33 +1,38 @@
 """
 Module d'orchestration de l'Agent intelligent NBA.
 
-Ce module définit l'Agent Pydantic AI, ses dépendances (VectorStore, SQL) 
+Ce module définit l'Agent Pydantic AI, ses dépendances (VectorStore, SQL)
 et ses outils. Il utilise un LLM pour raisonner et choisir entre une recherche
 sémantique ou une requête SQL.
 """
 
 # Imports
-import logfire
 import logging
 
+import logfire
 from pydantic import BaseModel, ConfigDict
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.models.mistral import MistralModel
 from pydantic_ai.providers.mistral import MistralProvider
 
-from livrable_p10.app.tools.sql.sql_pipeline import nlp_to_sql_pipeline
 from livrable_p10.app.tools.semantic.vector_store import VectorStoreManager
+from livrable_p10.app.tools.sql.sql_pipeline import nlp_to_sql_pipeline
 from livrable_p10.app.utils.config import (
-    SEARCH_K, TOP_P, TEMPERATURE, MAX_TOKENS, MISTRAL_API_KEY, MODEL_NAME
+    MAX_TOKENS,
+    MISTRAL_API_KEY,
+    MODEL_NAME,
+    SEARCH_K,
+    TEMPERATURE,
+    TOP_P,
 )
-from livrable_p10.app.utils.prompts import AGENT_SYSTEM_PROMPT_AFTER, AGENT_FEW_SHOTS
-
+from livrable_p10.app.utils.prompts import AGENT_FEW_SHOTS, AGENT_SYSTEM_PROMPT_AFTER
 
 logger = logging.getLogger(__name__)
 
 
 # ==============================================================================
 # --- Modèles et Dépendances ---
+
 
 class AgentDeps(BaseModel):
     """
@@ -36,8 +41,12 @@ class AgentDeps(BaseModel):
     Attributes:
         vector_store: Gestionnaire de la base de données vectorielle.
     """
-    model_config = ConfigDict(arbitrary_types_allowed=True)# Pydantic ne stop pas VectorStoreManager
+
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True
+    )  # Pydantic ne stop pas VectorStoreManager
     vector_store: VectorStoreManager
+
 
 # --- Configuration du modèle de langage (LLM) ---
 # Pour PydanticAI, on utilise l'URL du routeur sans le nom du modèle à la fin,
@@ -54,13 +63,13 @@ mistral_provider = MistralProvider(
 # Argument nommé : provider
 mistral_model = MistralModel(
     model_name=MODEL_NAME,
-    provider= mistral_provider,
+    provider=mistral_provider,
     settings={
-        "temperature":TEMPERATURE,
-        "max_tokens":MAX_TOKENS,
-        "top_p":TOP_P,
-        "max_retries":1
-    } #type:ignore
+        "temperature": TEMPERATURE,
+        "max_tokens": MAX_TOKENS,
+        "top_p": TOP_P,
+        "max_retries": 1,
+    },  # type:ignore
 )
 
 # =================================================================
@@ -70,16 +79,21 @@ nba_agent = Agent(
     deps_type=AgentDeps,
     # system_prompt=AGENT_SYSTEM_PROMPT_AFTER,
 )
+
+
 @nba_agent.system_prompt
 def add_rules(ctx: RunContext[AgentDeps]) -> str:
     return AGENT_SYSTEM_PROMPT_AFTER
+
 
 @nba_agent.system_prompt
 def add_examples(ctx: RunContext[AgentDeps]) -> str:
     return AGENT_FEW_SHOTS
 
-# =================================================================
+
+# =================================================================
 # --- Outils (Tools) ---
+
 
 @nba_agent.tool
 # ctx est une obligation de signature. Même si tu ne l'utilises pas, Pydantic AI injecte toujours
@@ -91,6 +105,7 @@ async def ask_database(ctx: RunContext[AgentDeps], user_query: str) -> str:
     """
     logging.info(f"Agent appelle SQL pour : {user_query}")
     return await nlp_to_sql_pipeline(user_query)
+
 
 @nba_agent.tool
 def ask_index(ctx: RunContext[AgentDeps], user_query: str) -> str:
@@ -112,12 +127,14 @@ def ask_index(ctx: RunContext[AgentDeps], user_query: str) -> str:
 
 # ======================= MOTEUR D'EXÉCUTION (WRAPPER) ==============================
 
+
 class NBAEngine:
     """
     Moteur principal orchestrant l'Agent et ses ressources.\n
     Centralise le VectorStore et fournit une interface simple
     pour les requêtes utilisateurs et l'évaluation.
     """
+
     def __init__(self):
         self.vsm = VectorStoreManager()
         self.deps = AgentDeps(vector_store=self.vsm)
@@ -144,11 +161,11 @@ class NBAEngine:
                 # if hasattr(result, 'new_data'):
                 #     return result.new_data
                 # # 3. Récupération du dernier message de l'assistant (méthode universelle)
-                if hasattr(result, 'all_messages'):
+                if hasattr(result, "all_messages"):
                     last_msg = result.all_messages()[-1]
                     # Si c'est un ModelResponse
-                    if hasattr(last_msg, 'parts'):
-                        return last_msg.parts[0].content #type:ignore
+                    if hasattr(last_msg, "parts"):
+                        return last_msg.parts[0].content  # type:ignore
                 # 4. Ultime secours : on renvoie l'objet tel quel
                 return str(result)
 
@@ -167,9 +184,6 @@ class NBAEngine:
             dict: Contient la réponse ('answer') et les contextes extraits ('contexts').
         """
         # Extraction manuelle des contextes pour eval
-        contexts = [result['text'] for result in self.vsm.search(question, k=SEARCH_K)]
+        contexts = [result["text"] for result in self.vsm.search(question, k=SEARCH_K)]
         answer = await self.run_nba_assistant(question)
-        return {
-            "answer": answer,
-            "contexts": contexts
-        }
+        return {"answer": answer, "contexts": contexts}

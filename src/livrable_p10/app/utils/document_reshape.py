@@ -15,11 +15,12 @@ on peut tout de même grandement améliorer la qualté du document transmis et l
 d'ignorer les bruits restants. Et en cas d'insatisfaction, des méthodes complémentaires au niveau
 du LLM peuvent être ajouté afin d'améliorer la qualité de réponse.
 """
+
 # Imports
+import logging
 import os
 import re
-import logging
-from typing import List,Dict,Any
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -28,9 +29,8 @@ logger = logging.getLogger(__name__)
 
 
 def get_clean_and_entitle(
-    documents:List[Dict[str, Any]],
-    blacklist_path:str="blacklist.txt"
-)->List[Dict[str, Any]]:
+    documents: List[Dict[str, Any]], blacklist_path: str = "blacklist.txt"
+) -> List[Dict[str, Any]]:
     """
     Nettoye le document avant le chunking. On réorganise le ``page_content`` en parcourant
     les lignes du document:
@@ -46,10 +46,10 @@ def get_clean_and_entitle(
     Returns:
         List[Dict[str, Any]]: Document après nettoyage
     """
-    # Charge la blacklist en un set
+    # Charge la blacklist en un set
     logging.info("Chargement du fichier blacklist.txt")
     if os.path.exists(blacklist_path):
-        with open(blacklist_path, 'r', encoding='utf-8') as f:
+        with open(blacklist_path, "r", encoding="utf-8") as f:
             blacklist = {line.strip().lower() for line in f if line.strip()}
     else:
         logging.warning("Pas de fichier ``blacklist.txt`` trouvé...")
@@ -57,15 +57,15 @@ def get_clean_and_entitle(
 
     for doc in documents:
         logging.info("Nettoyage des documents en cours...")
-        # On créée une liste des lignes qui composent le document via le séparateur \n
-        lines = doc['page_content'].split('\n')
-        # Le titre est dans le header de la page en deuxième ligne normalement
+        # On créée une liste des lignes qui composent le document via le séparateur \n
+        lines = doc["page_content"].split("\n")
+        # Le titre est dans le header de la page en deuxième ligne normalement
         title = lines[1].strip()
         cleaned_lines = []
 
         for line in lines:
             l_strip = line.strip()
-            if not l_strip: # Si la ligne est juste composé d'espaces
+            if not l_strip:  # Si la ligne est juste composé d'espaces
                 continue
             l_lower = l_strip.lower()
 
@@ -74,11 +74,11 @@ def get_clean_and_entitle(
             if l_lower in blacklist:
                 continue
             # On ignore les lignes de "métadonnées" Reddit (ex: "-15 j", "~ 2 h", "356")
-            if re.match(r'^[\d\s\+\-~]+$', l_strip) or re.search(r'\d+\s*[jmh]$', l_strip):
+            if re.match(r"^[\d\s\+\-~]+$", l_strip) or re.search(r"\d+\s*[jmh]$", l_strip):
                 continue
             # ----------- FILTRE DES ACCENTS
             # Si la ligne contient é, è, à, ç, ô on ignore (Les pubs et UI de Reddit sont en FR)
-            if re.search(r'[éèàçô]', l_strip):
+            if re.search(r"[éèàçô]", l_strip):
                 continue
             # ----------- ARRÊT PRÉMATURÉ DU DOCUMENT
             if "afficher plus de commentaires" in l_lower:
@@ -87,7 +87,7 @@ def get_clean_and_entitle(
             cleaned_lines.append(l_strip)
 
         # ASSEMBLAGE FINALE
-        doc['page_content'] = "\n".join(cleaned_lines)
-        doc['metadata']["title"] = title
+        doc["page_content"] = "\n".join(cleaned_lines)
+        doc["metadata"]["title"] = title
 
     return documents

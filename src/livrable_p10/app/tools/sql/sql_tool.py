@@ -4,25 +4,23 @@ Moteur de génération et d'exécution SQL
 Ce module transforme les prompts enrichis en requêtes SQL valides.
 Gère la sécurité (lecture seule) et valide les données de sortie.
 """
+
 # Imports
 import logging
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 
-from sqlalchemy import create_engine, text, Engine
 from langchain_mistralai import ChatMistralAI
+from sqlalchemy import Engine, create_engine, text
 
-
-from livrable_p10.app.utils.prompts import SQL_SYSTEM_PROMPT, SQL_FEW_SHOT
-from livrable_p10.app.utils.config import (
-    MISTRAL_API_KEY, MODEL_NAME
-)
+from livrable_p10.app.utils.config import MISTRAL_API_KEY, MODEL_NAME
+from livrable_p10.app.utils.prompts import SQL_FEW_SHOT, SQL_SYSTEM_PROMPT
 from livrable_p10.app.utils.schemas import SQLOutputSchema
 
 # Configuration du logger
 logger = logging.getLogger(__name__)
 
 
-# ============================================================================
+# ============================================================================
 
 
 class SQLQueryEngine:
@@ -48,11 +46,11 @@ class SQLQueryEngine:
         # self.client = InferenceClient(model=HF_MODEL_NAME, token=api_key)
         self.client = ChatMistralAI(
             model_name=MODEL_NAME,
-            api_key=MISTRAL_API_KEY, #type:ignore
-            temperature=0.0, # Le LLM doit exclusivement être factuel
-            max_tokens=250, # Pas besoin d'autant qu'en sémantique
-            max_retries = 3,
-            timeout = 60
+            api_key=MISTRAL_API_KEY,  # type:ignore
+            temperature=0.0,  # Le LLM doit exclusivement être factuel
+            max_tokens=250,  # Pas besoin d'autant qu'en sémantique
+            max_retries=3,
+            timeout=60,
         )
         self.prompt_sql = SQL_SYSTEM_PROMPT
         self.few_shots = SQL_FEW_SHOT
@@ -84,11 +82,7 @@ class SQLQueryEngine:
             raise PermissionError("Accès refusé : opération d'écriture interdite.")
 
         # On ne garde que la première instruction SQL pour plus de sécurité
-        return (
-            sql_query.split(';')[0] + ';' 
-            if ';' in sql_query 
-            else sql_query
-        )
+        return sql_query.split(";")[0] + ";" if ";" in sql_query else sql_query
 
     async def generate_sql(self, user_query: str) -> Optional[str]:
         """
@@ -101,9 +95,7 @@ class SQLQueryEngine:
             str: La requête SQL nettoyée.
         """
         # Construction du prompt structuré
-        full_prompt = (
-            f"{self.prompt_sql}\n\n{self.few_shots}\n\nQuestion: {user_query}\nSQL:"
-        )
+        full_prompt = f"{self.prompt_sql}\n\n{self.few_shots}\n\nQuestion: {user_query}\nSQL:"
         try:
             # Correction syntaxe LangChain : .ainvoke() et .content
             response = await self.client.ainvoke(full_prompt)
@@ -114,7 +106,7 @@ class SQLQueryEngine:
             return self._clean_sql_response(str(content))
         except Exception as e:
             logger.error(f"Erreur API : {e}")
-            raise RuntimeError(f"Erreur API : {e}")
+            raise RuntimeError(f"Erreur API : {e}") from e
 
     def execute_query(self, sql_query: str) -> List[Dict[str, Any]]:
         """
@@ -142,4 +134,4 @@ class SQLQueryEngine:
                 return validated_rows
         except Exception as e:
             logger.error(f"Erreur exécution SQL : {e}")
-            raise RuntimeError(f"Erreur exécution SQL : {e}")
+            raise RuntimeError(f"Erreur exécution SQL : {e}") from e
