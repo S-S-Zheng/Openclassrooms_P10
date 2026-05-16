@@ -25,11 +25,13 @@ if not MISTRAL_API_KEY:
     # Vous pouvez choisir de lever une exception ici ou de continuer
     # avec des fonctionnalités limitées
     # raise ValueError("Clé API Mistral manquante. Veuillez la définir dans le fichier .env")
-HF_API_KEY = os.getenv("HF_API_KEY")#os.getenv("HF_API_KEY")
-if not HF_API_KEY:
+HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")#os.getenv("HUGGINGFACE_TOKEN")
+if not HUGGINGFACE_TOKEN:
     print(
-        "⚠️ Attention: La clé API HF (HF_API_KEY) n'est pas définie dans le fichier .env"
+        "⚠️ Attention: La clé API HF (HUGGINGFACE_TOKEN) n'est pas définie dans le fichier .env"
     )
+HUGGINGFACE_USERNAME="S254"
+HUGGINGFACE_SPACE_NAME="NBA_Assistant"
 
 # --- Modèles ---
 EMBEDDING_MODEL = "mistral-embed"
@@ -67,7 +69,7 @@ SEARCH_K = 3                        # Nombre de documents à récupérer par dé
 # Limitation de la taille de la réponse
 MAX_TOKENS = 500
 # Contôle le côté créatif/factuel du LLM (aplati/accentue les probabilités)
-TEMPERATURE = 0.1
+TEMPERATURE = 0.2
 # Contrôle le champ des possibilités (tronque la distribution sur un intervalle donnée)
 TOP_P = 0.9
 
