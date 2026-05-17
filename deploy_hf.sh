@@ -15,7 +15,8 @@ git rm -rf --cached .
 
 # 4. Création d'un .gitattributes propre pour ton modèle ONNX
 cat << EOF > .gitattributes
-*.onnx filter=lfs diff=lfs merge=lfs -text
+*.db filter=lfs diff=lfs merge=lfs -text
+*.idx filter=lfs diff=lfs merge=lfs -text
 *.pkl filter=lfs diff=lfs merge=lfs -text
 *.json filter=lfs diff=lfs merge=lfs -text
 EOF
